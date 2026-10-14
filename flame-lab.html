@@ -1,0 +1,1215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flame Lab v6</title>
+<meta name="description" content="Interactive reduced-order model of flame behaviour in microgravity, with the whole page simulated as one fluid.">
+<style>:root{--bg:#050816;--bg2:#0a1233;--ink:#e8edff;--mut:#9aa7d6;--acc:#ffb347;--acc2:#6aa8ff;--line:rgba(140,170,255,.22);--card:rgba(8,13,38,.66);--pad:clamp(14px,2.2vw,28px)}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;color-scheme:dark}
+body{margin:0;background:#000;color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow-x:hidden;min-height:100vh}
+#stars,#fx,#world{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none}
+#stars{z-index:0}#fx{z-index:0}#world{z-index:1}
+main,.top{position:relative;z-index:3}
+h1{font-size:clamp(34px,5vw,64px);line-height:1.02;margin:.2em 0 .3em;letter-spacing:-.02em;background:linear-gradient(120deg,#fff,#ffcf8a 55%,#8fb7ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{margin:0 0 .5em;font-size:1.15rem;letter-spacing:.01em}h3{margin:1.2em 0 .4em;font-size:.95rem;color:var(--mut)}
+p{margin:.4em 0}.tiny{font-size:.82rem;color:var(--mut)}.eyebrow{font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin:0}
+a{color:var(--acc2)}a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,#burner:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.top{position:sticky;top:0;display:flex;align-items:center;gap:16px;padding:10px var(--pad);background:rgba(5,8,22,.72);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{font-weight:700;color:var(--ink);text-decoration:none;letter-spacing:.02em}.brand small{color:var(--acc)}
+.top nav{display:flex;gap:14px;flex-wrap:wrap;margin-left:auto}.top nav a{color:var(--mut);text-decoration:none;font-size:.9rem}.top nav a:hover{color:var(--ink)}
+.btn{background:rgba(120,160,255,.14);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font:inherit;cursor:pointer}
+.btn:hover{background:rgba(120,160,255,.26)}.btn[aria-pressed=true]{background:var(--acc);color:#1a0f00}
+.card{--heat:0;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:var(--pad);backdrop-filter:blur(6px);will-change:transform;
+box-shadow:0 8px 30px rgba(0,0,0,.35),0 0 calc(var(--heat)*46px) calc(var(--heat)*8px) rgba(255,140,50,calc(var(--heat)*.75)),inset 0 0 calc(var(--heat)*30px) rgba(255,120,40,calc(var(--heat)*.35));
+border-color:color-mix(in srgb,rgba(255,170,90,.9) calc(var(--heat)*100%),var(--line))}
+.top[data-solid]{--heat:0}
+.hero{min-height:calc(100vh - 60px);display:grid;grid-template-columns:minmax(260px,380px) 1fr minmax(240px,320px);gap:var(--pad);padding:var(--pad);align-items:start}
+.hero-l{grid-column:1}.hero-r{grid-column:3}
+.sec{padding:var(--pad);display:grid;grid-template-columns:minmax(280px,380px) 1fr minmax(280px,380px);gap:var(--pad);min-height:70vh;align-items:start;scroll-margin-top:60px}
+.sec .wide{grid-column:1/-1}.lab-l{grid-column:1}.lab-r{grid-column:3}
+.sec.last{padding-bottom:30vh}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-variant-numeric:tabular-nums}.kv dt{color:var(--mut)}.kv dd{margin:0;text-align:right}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0}
+select,input[type=text]{background:rgba(5,8,22,.8);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit}
+.sl{margin:12px 0}.sl .h{display:flex;justify-content:space-between;font-size:.88rem}.sl .h>span:first-child{display:flex;align-items:center;gap:6px}
+.sl output{color:var(--acc);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.ic{width:16px;height:16px}.ic.o2{font-size:11px;font-weight:700;width:auto;height:auto}
+.presets,.row2,.tabs,.filters{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chip{border:1px solid var(--line);background:transparent;color:var(--mut);border-radius:999px;padding:5px 12px;font:inherit;font-size:.82rem;cursor:pointer}
+.chip[aria-pressed=true],.chip[aria-selected=true]{background:rgba(255,179,71,.18);color:var(--ink);border-color:var(--acc)}
+.wtext{font-size:.92rem;color:#d3dbff}
+.tag{display:inline-block;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;border-radius:6px;padding:2px 7px;border:1px solid var(--line);white-space:normal}
+.tag.illu{color:#ffd29a;border-color:#8a6a3a}.tag.cmp{color:#9fd0ff;border-color:#3a6a9a}.tag.exp{color:#9fffc0;border-color:#3a9a5a}.tag.gap{color:#ff9f9f;border-color:#9a3a3a}.tag.syn{color:#d9b3ff;border-color:#6a3a9a}
+.twin{display:grid;grid-template-columns:1fr 1fr;gap:var(--pad);margin:14px 0}
+figure{margin:0}.chamber{aspect-ratio:2/3;max-height:70vh;margin:0 auto;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:radial-gradient(circle at 50% 100%,#0e1a48,#040716)}
+.chamber canvas{width:100%;height:100%;display:block}figcaption{text-align:center;margin-top:6px;color:var(--mut)}figcaption b{display:block;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.srcs{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr))}
+.src{border:1px solid var(--line);border-radius:12px;padding:12px;background:rgba(255,255,255,.03)}.src h4{margin:.2em 0;font-size:.92rem}.src p{font-size:.84rem;color:var(--mut)}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:.84rem}th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}th{color:var(--mut);font-weight:600}
+#aiForm{display:flex;gap:8px;margin:10px 0}#aiForm input{flex:1}
+.lim{padding-left:1.1em}.lim li{margin:.5em 0}
+#burner{position:fixed;z-index:2;width:0;height:0;left:0;top:0;cursor:grab;touch-action:none}
+#burner span{position:absolute;left:-58px;top:-4px;width:116px;height:22px;border-radius:6px 6px 10px 10px;background:linear-gradient(#8e9bc8,#454f7a 60%,#2a3158);border:1px solid #c6d0ff55;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+#burner:active{cursor:grabbing}
+@media(max-width:860px){.hero,.sec{grid-template-columns:minmax(0,1fr)}.hero-l,.hero-r,.lab-l,.lab-r{grid-column:1}.hero{padding-bottom:46vh}.twin{gap:8px}.top nav{margin-left:0;width:100%;order:3}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* iOS-style liquid glass over a black sky: thin bright rims, specular highlights that follow the pointer, saturated blurred backdrop,
+   springy press feedback. Chromium also gets a lens-like refraction on small controls (#lens); other browsers fall back to blur. */
+:root{--edge:rgba(255,255,255,.30);--glass:rgba(12,14,26,.42);--ink:#f2f5ff;--mut:#a9b3d6;font-family:-apple-system,"SF Pro Display","Segoe UI",system-ui,sans-serif}
+.card,.src,.chamber,.top{-webkit-backdrop-filter:blur(16px) saturate(1.7) brightness(1.02);backdrop-filter:blur(16px) saturate(1.7) brightness(1.02)}
+.card{--mx:50%;--my:0%;--pl:0;border:0;border-radius:32px;
+background:radial-gradient(280px 220px at var(--mx) var(--my),rgba(255,255,255,calc(.20*var(--pl))),transparent 72%),linear-gradient(165deg,rgba(255,255,255,.11),rgba(255,255,255,.02) 42%,rgba(255,255,255,.05)),var(--glass);
+box-shadow:inset 0 0 0 .6px rgba(255,255,255,.34),inset 0 1.5px 1px rgba(255,255,255,.6),inset 0 -1.5px 1px rgba(255,255,255,.14),inset 0 0 30px rgba(255,255,255,.06),0 30px 60px -18px rgba(0,0,0,.85),
+0 0 calc(var(--heat)*50px) calc(var(--heat)*8px) rgba(255,140,50,calc(var(--heat)*.7)),inset 0 0 calc(var(--heat)*36px) rgba(255,120,40,calc(var(--heat)*.34))}
+.card::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(120% 40% at 18% -6%,rgba(255,255,255,.26),transparent 60%),linear-gradient(112deg,transparent 40%,rgba(255,255,255,.06) 50%,transparent 60%)}
+.card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:1.2px;background:linear-gradient(155deg,rgba(255,255,255,.75),rgba(255,255,255,0) 28%,rgba(255,255,255,0) 66%,rgba(190,210,255,.5));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.top{position:sticky;top:10px;margin:10px var(--pad) 0;border-radius:999px;border:0;padding:8px 12px 8px 22px;background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.03)),var(--glass);box-shadow:inset 0 0 0 .6px rgba(255,255,255,.36),inset 0 1.5px 1px rgba(255,255,255,.55),0 18px 40px -12px rgba(0,0,0,.8)}
+.btn,.chip{--mx:50%;--my:0%;--pl:0;position:relative;color:var(--ink);border:0;border-radius:999px;cursor:pointer;-webkit-backdrop-filter:blur(8px) saturate(1.8);backdrop-filter:blur(8px) saturate(1.8);
+background:radial-gradient(90px 60px at var(--mx) var(--my),rgba(255,255,255,calc(.3*var(--pl))),transparent 70%),linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.05));
+box-shadow:inset 0 0 0 .6px rgba(255,255,255,.4),inset 0 1.2px 1px rgba(255,255,255,.55),0 6px 16px -6px rgba(0,0,0,.7);transition:transform .42s cubic-bezier(.3,1.7,.5,1),box-shadow .25s,background-color .25s}
+.btn{padding:9px 18px}.chip{padding:6px 14px;font-size:.84rem}
+.btn:hover,.chip:hover{transform:translateY(-1px) scale(1.03);box-shadow:inset 0 0 0 .6px rgba(255,255,255,.55),inset 0 1.2px 1px rgba(255,255,255,.7),0 10px 22px -6px rgba(0,0,0,.75),0 0 18px rgba(255,255,255,.14)}
+.btn:active,.chip:active{transform:scale(.93);transition-duration:.12s}
+.btn[aria-pressed=true],.chip[aria-pressed=true],.chip[aria-selected=true],.chip[aria-checked=true]{background:linear-gradient(180deg,rgba(255,206,130,.62),rgba(255,140,50,.34));box-shadow:inset 0 0 0 .6px rgba(255,220,160,.8),inset 0 1.2px 1px rgba(255,240,210,.8),0 0 20px rgba(255,150,60,.35);color:#fff}
+.btn:disabled{opacity:.5;cursor:progress}
+select,input[type=text]{background:rgba(255,255,255,.06);color:var(--ink);border:0;border-radius:14px;padding:9px 12px;box-shadow:inset 0 0 0 .6px rgba(255,255,255,.3),inset 0 1px 2px rgba(0,0,0,.5)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:30px;background:transparent;cursor:pointer;--p:50%}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(90deg,#ffb347 var(--p),rgba(255,255,255,.16) var(--p));box-shadow:inset 0 1px 2px rgba(0,0,0,.5)}
+input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:rgba(255,255,255,.16)}input[type=range]::-moz-range-progress{height:6px;border-radius:3px;background:#ffb347}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:34px;height:22px;margin-top:-8px;border-radius:12px;background:linear-gradient(180deg,#fff,#dfe5f5);box-shadow:0 3px 8px rgba(0,0,0,.55),inset 0 0 0 .5px rgba(255,255,255,.9),0 0 0 .5px rgba(0,0,0,.2);transition:transform .3s cubic-bezier(.3,1.7,.5,1)}
+input[type=range]::-moz-range-thumb{width:34px;height:22px;border:0;border-radius:12px;background:linear-gradient(180deg,#fff,#dfe5f5)}
+input[type=range]:active::-webkit-slider-thumb{transform:scale(1.14)}
+.src{border-radius:22px;border:0;background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.02));box-shadow:inset 0 0 0 .6px rgba(255,255,255,.28),inset 0 1px 1px rgba(255,255,255,.4)}
+.chamber{border-radius:26px;border:0;background:rgba(0,0,0,.55);box-shadow:inset 0 0 0 .6px rgba(255,255,255,.3),inset 0 1.5px 1px rgba(255,255,255,.45),inset 0 0 50px rgba(255,255,255,.04)}
+table,th,td{border-color:rgba(255,255,255,.12)}th{color:#c9d2f2}
+.fuelrow .chips{display:flex;flex-wrap:wrap;gap:8px}.fuelrow{margin:8px 0}.fuelrow>span{display:block;margin-bottom:6px;color:var(--mut)}
+.hotp{min-height:4.8em}.hero{min-height:calc(100vh - 70px)}
+#burner span{background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(190,205,240,.3) 55%,rgba(90,105,160,.45));border:0;box-shadow:inset 0 0 0 .6px rgba(255,255,255,.7),inset 0 1.5px 1px rgba(255,255,255,.9),0 10px 24px rgba(0,0,0,.6);backdrop-filter:blur(6px)}
+#burner .stand{position:absolute;display:block;border-radius:0 0 18px 18px;background:linear-gradient(90deg,rgba(255,255,255,.16),rgba(255,255,255,.03) 50%,rgba(255,255,255,.12));box-shadow:inset 0 0 0 .6px rgba(255,255,255,.28);backdrop-filter:blur(10px) saturate(1.8)}
+@supports(backdrop-filter:url(#lens)){.top,.btn,.chip{-webkit-backdrop-filter:url(#lens) blur(6px) saturate(1.9);backdrop-filter:url(#lens) blur(6px) saturate(1.9)}}
+@media(max-width:860px){.top{border-radius:28px}.card{border-radius:26px}}
+@supports not (backdrop-filter:blur(1px)){.card,.top,.src,.chamber{background:rgba(14,16,28,.88)}}
+@media(prefers-reduced-transparency:reduce){.card,.top,.src,.chamber,.btn,.chip{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(14,16,28,.92)}}
+/* ===== Buttons: v4 look (Uiverse style, from Flame Lab v4) ===== */
+@property --angle-1{syntax:"<angle>";inherits:false;initial-value:-75deg}
+.btn,#pause{position:relative;isolation:isolate;cursor:pointer;border-radius:999px!important;padding:9px 20px!important;border:0!important;color:var(--ink)!important;background:linear-gradient(-75deg,rgba(255,255,255,.04),rgba(255,255,255,.14),rgba(255,255,255,.04))!important;box-shadow:inset 0 1px 1px rgba(0,0,0,.25),inset 0 -1px 1px rgba(255,255,255,.12),0 4px 10px -4px rgba(0,0,0,.6)!important;transition-property:transform,background-color!important;transition-duration:.4s!important;transition-timing-function:cubic-bezier(.25,1,.5,1)!important;font-family:"IBM Plex Mono",ui-monospace,monospace!important;font-size:.75rem!important;letter-spacing:.08em!important;text-transform:uppercase!important}
+.btn::after,#pause::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;box-sizing:border-box;pointer-events:none;background:conic-gradient(from var(--angle-1) at 50% 50%,rgba(255,255,255,.55),rgba(255,255,255,0) 5% 40%,rgba(255,255,255,.55) 50%,rgba(255,255,255,0) 60% 95%,rgba(255,255,255,.55));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;transition:--angle-1 .5s ease!important}
+.btn:hover,#pause:hover{transform:scale(.975)!important;background:linear-gradient(-75deg,rgba(255,255,255,.08),rgba(255,255,255,.2),rgba(255,255,255,.08))!important}
+.btn:hover::after,#pause:hover::after{--angle-1:-125deg}
+.btn:active,#pause:active{transform:scale(.94)!important}
+.btn:disabled,#pause:disabled{opacity:.4!important;cursor:not-allowed!important;transform:none!important}
+/* Pause is the primary action: keep it blue */
+#pause{background:linear-gradient(-75deg,#2d74e0,#4f9bff,#2d74e0)!important;color:#fff!important}
+/* Dotted grid background from the same Uiverse snippet */
+body::before{background-image:radial-gradient(rgba(255,255,255,.14) 1px,transparent 1.2px)!important;background-size:30px 30px!important;background-position:2px 2px}
+.chip{border-radius:999px!important;padding:7px 14px!important;background:rgba(255,255,255,.03)!important;font-size:.7rem!important}
+html.light .btn{background:linear-gradient(-75deg,#eef2f6,#ffffff,#eef2f6)!important;box-shadow:inset 0 1px 1px rgba(0,0,0,.06),0 3px 8px -4px rgba(0,0,0,.3)!important}
+html.light .btn::after{background:conic-gradient(from var(--angle-1) at 50% 50%,rgba(0,0,0,.4),rgba(0,0,0,0) 5% 40%,rgba(0,0,0,.4) 50%,rgba(0,0,0,0) 60% 95%,rgba(0,0,0,.4))!important}
+
+/* ===== Flame control sidebar ===== */
+.flame-tab{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:20;writing-mode:vertical-rl;border-radius:14px 0 0 14px!important;padding:14px 10px!important}
+.flame-side{position:fixed;top:0;right:0;height:100vh;width:min(380px,94vw);z-index:19;overflow-y:auto;padding:76px 16px 24px;
+  background:rgba(8,12,30,.78);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);border-left:1px solid rgba(255,255,255,.22);
+  transform:translateX(100%);transition:transform .35s cubic-bezier(.2,.8,.2,1);box-shadow:-12px 0 40px rgba(0,0,0,.4)}
+.flame-side.open{transform:none}
+.flame-side-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.flame-side-head h2{margin:0}
+.flame-side-body .card{margin-bottom:14px;padding:16px}
+.flame-side-body .card:last-child{margin-bottom:0}
+.flame-side .card::before,.flame-side .card::after{display:none}
+#hero-empty{display:none}
+
+/* Flame lives only in the Flame control panel: hidden on the main page */
+body:not(.flame-on):not(.flame-panel) #world,body:not(.flame-on):not(.flame-panel) #burner{display:none!important}
+
+/* ===== Flame control sidebar: clean redesign ===== */
+.flame-tab{position:fixed!important;right:16px!important;bottom:24px!important;top:auto!important;transform:none!important;writing-mode:horizontal-tb!important;
+  border-radius:999px!important;padding:10px 18px!important;font-size:.72rem!important;letter-spacing:.08em;background:rgba(20,26,50,.85)!important;z-index:20}
+.flame-side{width:min(360px,92vw)!important;background:#0b0f1e!important;border-left:1px solid rgba(255,255,255,.08)!important;box-shadow:-20px 0 60px rgba(0,0,0,.55)!important;
+  padding:0!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;display:flex;flex-direction:column}
+.flame-side-head{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:18px 20px;margin:0;background:#0b0f1e;border-bottom:1px solid rgba(255,255,255,.08)}
+.flame-side-head h2{font-size:1rem;font-weight:600;margin:0;background:none;-webkit-text-fill-color:initial;color:#f2f5ff}
+.flame-side-head .btn{padding:6px 14px!important;font-size:.78rem!important}
+.flame-side-body{padding:6px 20px 32px;display:block}
+.flame-side-body .card{background:none!important;border:0!important;border-bottom:1px solid rgba(255,255,255,.08)!important;border-radius:0!important;box-shadow:none!important;padding:18px 0!important;margin:0!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.flame-side-body .lab-l>h2,.flame-side-body .lab-r>h2,.flame-side-body .hero-r>h2{font-size:.72rem!important;font-weight:600!important;text-transform:uppercase;letter-spacing:.12em;color:#8a96b8!important;margin:0 0 12px!important;background:none!important;-webkit-text-fill-color:#8a96b8!important}
+.flame-side-body .lab-l>h2{display:none}
+.flame-side-body .fuelrow{margin:0 0 14px}
+.flame-side-body .fuelrow>span{font-size:.8rem;color:#a9b3d6;margin-bottom:8px}
+.flame-side-body .chips{gap:6px}
+.flame-side-body .chip{border-radius:999px!important;padding:6px 12px!important;font-size:.78rem!important;background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.12)!important;color:#c9d2ee!important;box-shadow:none!important;animation:none!important}
+.flame-side-body .chip[aria-checked=true],.flame-side-body .chip[aria-pressed=true]{background:#2d74e0!important;border-color:#2d74e0!important;color:#fff!important}
+.flame-side-body .sl{margin:14px 0}
+.flame-side-body .sl .h{font-size:.8rem;color:#a9b3d6}
+.flame-side-body .sl output{color:#f2f5ff;font-size:.8rem}
+.flame-side-body input[type=range]{accent-color:#4f9bff;height:18px}
+.flame-side-body .presets{gap:6px;margin:6px 0 14px}
+.flame-side-body .row2{gap:8px;margin:0}
+.flame-side-body .row2 .btn{flex:1;padding:9px 12px!important;font-size:.8rem!important;text-align:center}
+.flame-side-body #wtabs{margin:0 0 12px!important;gap:0!important;border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden}
+.flame-side-body #wtabs .chip{height:38px!important;font-size:.8rem!important;color:#a9b3d6!important}
+.flame-side-body .wtext{font-size:.82rem!important;line-height:1.55!important;color:#a9b3d6!important;margin:0 0 10px}
+.flame-side-body .tag{font-size:.64rem}
+.flame-side-body .kv{font-size:.82rem;gap:8px 16px}
+.flame-side-body .kv dd{color:#f2f5ff}
+.flame-side-body #hot{font-size:.76rem!important;color:#8a96b8!important;margin:10px 0 0!important}
+.flame-side-body .hotp{min-height:0!important}
+
+/* ===== Stage 1: side rail, views, drawer, back-to-top ===== */
+:root{--rail-w:232px;--rail-c:72px}
+.rail{position:fixed;top:0;left:0;bottom:0;width:var(--rail-w);z-index:30;display:flex;flex-direction:column;gap:6px;padding:18px 12px;
+  background:rgba(8,11,26,.88);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-right:1px solid rgba(255,255,255,.08);overflow-y:auto;transition:width .25s ease,transform .3s ease}
+.brand-row{display:flex;align-items:center;justify-content:space-between;padding:4px 8px 14px}
+.brand{font-weight:700;color:#f2f5ff;letter-spacing:.02em}.brand small{color:#ffb347;font-weight:600;font-size:.7em}
+.tog{background:none;border:0;color:#a9b3d6;width:34px;height:34px;border-radius:8px;display:grid;place-items:center;cursor:pointer}
+.tog svg,.navi svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.rnav{display:flex;flex-direction:column;gap:2px}
+.grp{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:#6f7aa0;padding:14px 10px 6px}
+.navi{position:relative;display:flex;align-items:center;gap:12px;width:100%;padding:9px 12px;border:0;border-radius:10px;background:none;color:#a9b3d6;font:inherit;font-size:.9rem;text-align:left;cursor:pointer;transition:background .2s,color .2s}
+.navi:hover{background:rgba(255,255,255,.06);color:#f2f5ff}
+.navi[aria-current=true]{background:rgba(79,155,255,.14);color:#f2f5ff}
+.navi[aria-current=true]::before{content:"";position:absolute;left:-12px;top:8px;bottom:8px;width:3px;border-radius:3px;background:#4f9bff}
+.rail.min{width:var(--rail-c)}
+.rail.min .lbl,.rail.min .grp,.rail.min .brand{display:none}
+.rail.min .navi{justify-content:center;padding:10px 0}
+.rail.min .brand-row{justify-content:center}
+/* content sits to the right of the rail */
+#top,.top{margin-left:calc(var(--rail-w) + 12px)!important;transition:margin-left .25s ease}
+body.rail-min #top,body.rail-min .top{margin-left:calc(var(--rail-c) + 12px)!important}
+.menu-btn,.rail-scrim{display:none}
+#btt{position:fixed;right:18px;bottom:88px;z-index:25;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(20,26,50,.85);color:#f2f5ff;font-size:1.1rem;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+#btt.show{opacity:1;pointer-events:auto}
+/* views: hidden sections are removed from the page flow */
+main#top section[hidden]{display:none!important}
+@media(max-width:820px){
+  #top,.top{margin-left:0!important}
+  body.rail-min #top,body.rail-min .top{margin-left:0!important}
+  .rail{transform:translateX(-100%);width:min(280px,82vw);box-shadow:20px 0 50px rgba(0,0,0,.5)}
+  .rail.open{transform:none}
+  .rail.min{width:min(280px,82vw)}
+  .rail.min .lbl,.rail.min .grp,.rail.min .brand{display:revert}
+  .rail.min .navi{justify-content:flex-start;padding:9px 12px}
+  .menu-btn{display:grid;place-items:center;position:fixed;top:12px;left:12px;z-index:31;width:42px;height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(20,26,50,.85);color:#f2f5ff;cursor:pointer}
+  .menu-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+  .rail-scrim{display:block;position:fixed;inset:0;z-index:29;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .3s}
+  .rail-scrim.show{opacity:1;pointer-events:auto}
+}
+
+/* ===== Stage 2: theme switch, status bar, boot overlay ===== */
+#boot{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:radial-gradient(120% 90% at 70% 0%,#12205a 0%,#070c26 45%,#03050f 100%);transition:opacity .7s ease,visibility .7s}
+#boot.gone{opacity:0;visibility:hidden}
+#boot{pointer-events:none}
+#boot .bl{width:min(320px,70vw);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.72rem;letter-spacing:.08em;color:var(--mut);text-transform:uppercase}
+#boot .bl-track{height:2px;background:#1f2a37;margin-bottom:10px;overflow:hidden}
+#boot .bl-track i{display:block;height:100%;width:0;background:#3d8bfd;transition:width .15s linear}
+.statusbar{position:fixed;top:0;left:var(--rail-w);right:0;height:30px;z-index:60;display:flex;align-items:center;gap:18px;padding:0 var(--pad);background:#0b0f14;border-bottom:1px solid #253040;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.7rem;color:var(--mut);white-space:nowrap;overflow:hidden;transition:left .25s ease}
+body.rail-min .statusbar{left:var(--rail-c)}
+.statusbar b{color:#f2f5ff;font-weight:500}.statusbar i{font-style:normal}
+.statusbar .ok{color:#4fbf7f}.statusbar .warn{color:#e0a43a}
+.statusbar .utc{margin-left:auto}
+.top{top:40px!important}
+.switch{position:relative;display:inline-block;width:60px;height:34px;margin:4px 12px 14px;flex:none}
+.switch #input{opacity:0;width:0;height:0;position:absolute}
+.switch .slider{position:absolute;cursor:pointer;inset:0;background-color:#2196f3;transition:.4s;z-index:0;overflow:hidden;border-radius:34px}
+.switch .sun-moon{position:absolute;height:26px;width:26px;left:4px;bottom:4px;background-color:yellow;transition:.4s;border-radius:50%}
+.switch #input:checked + .slider{background-color:black}
+.switch #input:focus-visible + .slider{box-shadow:0 0 0 2px #4f9bff}
+.switch #input:checked + .slider .sun-moon{transform:translateX(26px);background-color:white;animation:rotate-center .6s ease-in-out both}
+.switch .moon-dot{opacity:0;transition:.4s;fill:gray;position:absolute}
+.switch #input:checked + .slider .sun-moon .moon-dot{opacity:1}
+.switch .cloud-light,.switch .cloud-dark{position:absolute;animation:cloud-move 6s ease infinite}
+.switch .cloud-light{fill:#eee}.switch .cloud-dark{fill:#ccc;animation-delay:1s}
+.switch .stars{transform:translateY(-32px);opacity:0;transition:.4s}
+.switch #input:checked + .slider .stars{transform:translateY(0);opacity:1}
+.switch .star{fill:white;position:absolute;animation:star-twinkle 2s infinite}
+.switch svg{position:absolute;width:10px;height:10px}
+@keyframes cloud-move{0%{transform:translateX(0)}40%{transform:translateX(4px)}80%{transform:translateX(-4px)}100%{transform:translateX(0)}}
+@keyframes rotate-center{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+@keyframes star-twinkle{0%{transform:scale(1)}40%{transform:scale(1.2)}80%{transform:scale(.8)}100%{transform:scale(1)}}
+/* white theme: light palette for the whole page */
+html.light{--ink:#15202b;--mut:#5a6776;--edge:rgba(20,30,50,.18);--glass:rgba(255,255,255,.7);color-scheme:light}
+html.light body{background:#f1f4f8!important;color:#15202b}
+html.light #stars,html.light #fx{display:none}
+html.light .card{background:rgba(255,255,255,.72)!important;border-color:rgba(20,30,50,.12)!important;box-shadow:0 8px 24px rgba(20,30,50,.08)!important}
+html.light .rail{background:#ffffff!important;border-right-color:#d5dde6!important}
+html.light .navi{color:#4a5666}html.light .navi:hover{background:rgba(20,30,50,.05);color:#15202b}
+html.light .navi[aria-current=true]{background:rgba(61,139,253,.12);color:#15202b}
+html.light .brand{color:#15202b}
+html.light .statusbar{background:#ffffff!important;border-bottom-color:#d5dde6!important;color:#5a6776}
+html.light .statusbar b{color:#15202b}
+html.light #boot{background:#f4f6f8}
+html.light #boot .bl{color:#5a6776}
+html.light #boot .bl-track{background:#d5dde6}
+html.light h1{-webkit-text-fill-color:initial;background:none;color:#15202b}
+html.light .top{background:rgba(255,255,255,.85)!important}
+@media(max-width:820px){
+  .statusbar{left:0;padding-left:64px;gap:12px;font-size:.62rem}
+  .statusbar span:nth-child(2){display:none}
+  .statusbar .utc{margin-left:auto}
+  .top{top:40px!important}
+  .menu-btn{top:0!important;left:0!important;z-index:70!important;width:44px!important;height:40px!important;border-radius:0!important;border:0!important;border-right:1px solid #253040!important}
+}
+
+/* ===== Stage 3: Dashboard view ===== */
+#dash{display:block;padding-top:calc(var(--pad) * 2)}
+#dash .dash-card{max-width:820px;margin:0 auto}
+#dash .dash-card .kv{font-size:.95rem}
+</style>
+</head>
+<body>
+<div id="boot" aria-hidden="true"><div class="bl"><div class="bl-track"><i id="blBar"></i></div><span><span id="blStep">Initialising solver</span> &middot; <b id="blPct">0</b>%</span></div></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><filter id="lens" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='x' x1='0' x2='1'%3E%3Cstop offset='0' stop-color='%23ff0000'/%3E%3Cstop offset='.2' stop-color='%23800000'/%3E%3Cstop offset='.8' stop-color='%23800000'/%3E%3Cstop offset='1' stop-color='%23000000'/%3E%3C/linearGradient%3E%3ClinearGradient id='y' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%2300ff00'/%3E%3Cstop offset='.2' stop-color='%23008000'/%3E%3Cstop offset='.8' stop-color='%23008000'/%3E%3Cstop offset='1' stop-color='%23000000'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' fill='%23000'/%3E%3Crect width='100' height='100' fill='url(%23x)'/%3E%3Crect width='100' height='100' fill='url(%23y)' style='mix-blend-mode:screen'/%3E%3C/svg%3E" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" result="m"/><feDisplacementMap in="SourceGraphic" in2="m" scale="22" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
+<canvas id="stars" aria-hidden="true"></canvas>
+<canvas id="fx" aria-hidden="true"></canvas>
+<canvas id="world" aria-hidden="true"></canvas>
+<div id="burner" role="slider" tabindex="0" aria-label="Burner position. Drag, or use arrow keys." aria-valuetext="Burner"><span></span><i class="stand"></i></div>
+
+<header class="top" data-solid>
+  <a class="brand" href="#top">Flame Lab <small>v6</small></a>
+  
+  <button id="pause" class="btn" aria-pressed="false" title="Pause simulation">Pause</button>
+</header>
+<button id="menuBtn" class="menu-btn" type="button" aria-label="Open menu" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+<div class="rail-scrim" id="railScrim"></div>
+<div class="statusbar" role="status" aria-live="off"><span><i>Solver</i> <b id="sState" class="ok">Running</b></span><span>Mode <b>Reduced-order</b></span><span><i>Validation</i> <b class="warn">Not validated</b></span><span class="utc"><b id="utc">--:--:--</b> <i>UTC</i></span></div>
+<aside class="rail" id="rail" aria-label="Site navigation">
+  <div class="brand-row">
+    <span class="brand">Flame Lab <small>v6</small></span>
+    <button id="railToggle" class="navi tog" type="button" aria-label="Collapse menu" aria-expanded="true" title="Collapse menu"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  </div>
+  <label class="switch" title="Dark / white theme" aria-label="Dark or white theme">
+  <input id="input" type="checkbox" checked />
+  <div class="slider round">
+    <div class="sun-moon">
+      <svg id="moon-dot-1" class="moon-dot" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+      <svg id="moon-dot-2" class="moon-dot" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+      <svg id="moon-dot-3" class="moon-dot" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+      <svg id="light-ray-1" class="light-ray" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+      <svg id="light-ray-2" class="light-ray" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+      <svg id="light-ray-3" class="light-ray" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+      <svg id="cloud-1" class="cloud-dark" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+      <svg id="cloud-2" class="cloud-dark" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+      <svg id="cloud-3" class="cloud-dark" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+      <svg id="cloud-4" class="cloud-light" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+      <svg id="cloud-5" class="cloud-light" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+      <svg id="cloud-6" class="cloud-light" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50"></circle></svg>
+    </div>
+    <div class="stars">
+      <svg id="star-1" class="star" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+      <svg id="star-2" class="star" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+      <svg id="star-3" class="star" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+      <svg id="star-4" class="star" viewBox="0 0 20 20"><path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z"></path></svg>
+    </div>
+  </div>
+  </label>
+  <nav class="rnav" aria-label="Views">
+    <div class="grp">Simulation</div>
+    <button class="navi" type="button" data-view="lab" title="Simulation"><svg viewBox="0 0 24 24"><path d="M12 3c2 3 5 5 5 9a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-8z"/></svg><span class="lbl">Flame lab</span></button>
+    <button class="navi" type="button" data-view="dash" title="Dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span class="lbl">Dashboard</span></button>
+    <div class="grp">Analysis</div>
+    <button class="navi" type="button" data-view="compare" title="Compare"><svg viewBox="0 0 24 24"><path d="M4 6h10M4 12h16M4 18h8"/></svg><span class="lbl">Compare</span></button>
+    <button class="navi" type="button" data-view="mission" title="Mission"><svg viewBox="0 0 24 24"><path d="M5 19V5M5 5h11l-2 4 2 4H5"/></svg><span class="lbl">Mission</span></button>
+    <button class="navi" type="button" data-view="gaps" title="Research gaps"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM9 9l6 6M15 9l-6 6"/></svg><span class="lbl">Research gaps</span></button>
+    <div class="grp">Evidence</div>
+    <button class="navi" type="button" data-view="data" title="Data"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/></svg><span class="lbl">Data</span></button>
+    <button class="navi" type="button" data-view="analyst" title="AI Analyst"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="lbl">AI Analyst</span></button>
+    <div class="grp">Reference</div>
+    <button class="navi" type="button" data-view="about" title="About"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v.01M11 12h1v5h1"/></svg><span class="lbl">About</span></button>
+  </nav>
+</aside>
+<button id="btt" type="button" aria-label="Back to top" title="Back to top">&uarr;</button>
+
+
+<main id="top">
+<section class="hero" id="hero">
+  <div class="hero-l card" data-solid>
+    <p class="eyebrow">Reduced-order model &middot; not validated</p>
+    <h1>Flame in Freefall</h1>
+    <p>One fluid solver covers this entire page. Panels are solid walls, the flame heats them, and your pointer pushes the gas. Drag the burner plate or press the arrow keys when it is focused.</p>
+  </div>
+
+</section>
+
+
+
+<section id="dash" class="sec" hidden>
+  <div class="card wide dash-card" data-solid>
+    <h2>Dashboard &middot; live telemetry</h2>
+    <dl class="kv" id="live"></dl>
+    <p class="tiny hotp" id="hot"></p>
+  </div>
+</section>
+
+<section id="compare" class="sec">
+  <div class="card wide" data-solid>
+    <h2>Comparison System: same conditions, different gravity</h2>
+    <p class="tiny">Two identical 2-D chambers, run with the current Lab settings. The only difference is gravity. These chambers are intentionally boxed so the comparison is controlled. <span class="tag cmp">Model-based comparison</span></p>
+    <div class="twin">
+      <figure><div class="chamber"><canvas id="cE"></canvas></div><figcaption>Earth (1 g)<b id="mE"></b></figcaption></figure>
+      <figure><div class="chamber"><canvas id="cM"></canvas></div><figcaption>Microgravity<b id="mM"></b></figcaption></figure>
+    </div>
+    <p id="cmpText" class="wtext"></p>
+  </div>
+</section>
+
+<section id="mission" class="sec">
+  <div class="card wide" data-solid>
+    <h2>Mission Scenario Analyzer</h2>
+    <p class="tiny">Runs the same reduced-order flame model under five habitat conditions and compares each with Earth. Gravity, ISS cabin air and pressure range come from NASA documents; everything else is an assumption, and is labelled as such. <span class="tag illu">Model prediction</span></p>
+    <div class="row2"><button class="btn" id="mRun">Run analysis</button><span class="tiny" id="mStat"></span></div>
+    <div class="tw"><table id="mTab"></table></div>
+    <p class="tiny" id="mNote"></p>
+  </div>
+</section>
+
+<section id="gaps" class="sec">
+  <div class="card wide" data-solid>
+    <h2>Research Gap Finder</h2>
+    <p class="tiny">Compares each mission scenario with the evidence loaded in the Data Explorer and ranks what is missing. This is a heuristic over the loaded sources only; a gap here is not proof that the literature lacks the study. <span class="tag cmp">Heuristic ranking</span></p>
+    <div class="tw"><table id="gTab"></table></div>
+    <h3>Highest-priority research questions</h3>
+    <ol id="gQ" class="lim"></ol>
+    <p class="tiny" id="gForm"></p>
+  </div>
+</section>
+
+<section id="data" class="sec">
+  <div class="card wide" data-solid>
+    <h2>Data Explorer</h2>
+    <p class="tiny">Every entry below is a verified public page. No quantitative dataset is loaded yet, so numeric rows are marked as gaps rather than invented.</p>
+    <div class="filters" id="filters" role="group" aria-label="Filter by evidence class"></div>
+    <div id="srcs" class="srcs"></div>
+    <h3>Evidence coverage</h3>
+    <div class="tw"><table id="cov"></table></div>
+  </div>
+</section>
+
+<section id="analyst" class="sec">
+  <div class="card wide" data-solid>
+    <h2>AI Analyst</h2>
+    <p id="aiStatus" class="tiny"></p>
+    <form id="aiForm"><input id="aiQ" type="text" placeholder="Ask about the loaded evidence" aria-label="Question" autocomplete="off"><button class="btn" type="submit">Analyze</button></form>
+    <div id="aiOut" class="wtext" aria-live="polite"></div>
+  </div>
+</section>
+
+<section id="about" class="sec last">
+  <div class="card wide" data-solid>
+    <h2>Limitations and honesty notes</h2>
+    <ul class="lim">
+      <li><b>2-D planar geometry.</b> A planar slot flame has no steady microgravity state in two dimensions, so a microgravity flame keeps growing while it runs. Real droplet and jet flames are three-dimensional.</li>
+      <li><b>Not validated.</b> Solver constants (fuel properties, heat-loss coefficient, vorticity confinement) are approximate and uncited. Hydrogen and low-oxygen results are unverified.</li>
+      <li><b>Visual detail is not physics.</b> Fine texture is advected noise added for clarity. Colours are an illustrative temperature ramp.</li>
+      <li><b>UI heating and motion are a lumped model.</b> Panel temperatures and motion follow the nearby gas, but they are an interface effect, not a heat-transfer calculation.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- Flame control sidebar: one tab that holds every flame control -->
+<button id="flameTab" class="btn flame-tab" aria-controls="flameSide" aria-expanded="false">Flame control</button>
+<aside id="flameSide" class="flame-side" aria-label="Flame control">
+  <div class="flame-side-head"><h2>Flame control</h2><button class="btn" id="flameClose" aria-label="Close flame control">Close</button></div>
+  <div class="flame-side-body">
+  <div class="lab-l card" data-solid>
+    <h2>Flame Lab</h2>
+    <div class="fuelrow"><span id="fuelLbl">Fuel</span><div class="chips" id="fuel" role="radiogroup" aria-labelledby="fuelLbl"></div></div>
+    <div id="sliders"></div>
+    <div class="presets" id="presets" role="group" aria-label="Presets"></div>
+    <div class="row2"><button class="btn" id="reset">Reset flame</button><button class="btn" id="export">Export JSON</button></div>
+  </div>
+  <div class="lab-r card" data-solid>
+    <h2>What if&hellip;</h2>
+    <div class="tabs" id="wtabs" role="tablist"></div>
+    <p id="wtext" class="wtext"></p>
+    <p class="tag illu">Model prediction</p>
+  </div>
+  </div>
+</aside>
+</main>
+<script>
+/* Flame Lab engine: constants, state, reduced-order solver, renderer, whole-page world, body physics, comparison chambers. No DOM layout code. */
+/* Flame Lab v3: shared helpers, constants and application state. */
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)],cl=(x,a,b)=>Math.min(b,Math.max(a,x));
+const ic=(p,f)=>`<svg class='ic' viewBox='0 0 24 24' fill='${f?'currentColor':'none'}' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='${p}'/></svg>`;
+const IC={g:'M4 12a8 8 0 1016 0 8 8 0 10-16 0M2 15c6-3 14-8 20-7',p:'M4 17a8 8 0 1116 0M12 17l4-5',T:'M10 14V5a2 2 0 114 0v9a4 4 0 11-4 0z',fuel:'M12 3c4 5 6 8 6 11a6 6 0 11-12 0c0-3 2-6 6-11z',flame:'M12 3c1 4 5 6 5 11a5 5 0 11-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-10z',brain:'M9 4a3 3 0 00-3 3 3 3 0 00-2 5 3 3 0 002 5 3 3 0 006 0V4a3 3 0 00-3 0zM15 4a3 3 0 013 3 3 3 0 012 5 3 3 0 01-2 5 3 3 0 01-3 1',spark:'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z',play:'M7 5l12 7-12 7z',ch:'M9 6l6 6-6 6',cl:'M15 6l-6 6 6 6',sun:'M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5',sl:'M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M8 15v4',arrow:'M3 12h14M13 7l5 5-5 5',bolt:'M13 2L4 14h7l-1 8 9-12h-7z'};
+const o2i=`<span class='ic o2' aria-hidden='true'>O<sub>2</sub></span>`;
+/* Approximate textbook fuel constants. s = stoichiometric O2 mass per fuel mass, dT = adiabatic rise (K),
+   D = diffusivity (m2/s at 1 atm), M = molar mass, soot = relative sooting tendency for the visual proxy. Not yet cited. */
+const FU={Methane:{s:3.99,dT:1930,D:2.1e-5,M:16,soot:.3},Hydrogen:{s:7.94,dT:2090,D:7.6e-5,M:2,soot:0},Propane:{s:3.64,dT:1970,D:1e-5,M:44,soot:1},Ethanol:{s:2.09,dT:1895,D:1.2e-5,M:46,soot:.2}};
+const P={Microgravity:{v:100,o2:21,p:1,T:300,u:.02,q:1.5},Earth:{v:0,o2:21,p:1,T:300,u:.02,q:1.5},'Low Oxygen':{v:100,o2:14,p:1,T:300,u:.02,q:1.5},'High Temperature':{v:100,o2:21,p:1,T:450,u:.02,q:1.5}};
+const PK=['v','o2','p','T','u','q'];
+const S={v:100,o2:21,p:1,T:300,u:.02,q:1.5,fuel:'Methane',busy:0,w:'Gravity'};
+const geff=s=>s.v<=2?9.81:s.v>=98?0:(1-s.v/100)*9.81;
+const gl=s=>s.v>=98?'Microgravity':s.v<=2?'Earth (1 g)':(geff(s)/9.81).toFixed(2)+' g';
+const fp=p=>(+(+p).toFixed(1))+' atm';
+const SL=[{k:'v',n:'Gravity',min:0,max:100,st:1,i:ic(IC.g),f:gl},{k:'o2',n:'Oxygen (O2)',min:10,max:35,st:1,i:o2i,f:s=>s.o2+'%'},{k:'p',n:'Pressure',min:.5,max:2,st:.1,i:ic(IC.p),f:s=>fp(s.p)},{k:'T',n:'Ambient temperature',min:250,max:500,st:5,i:ic(IC.T),f:s=>s.T+' K'},{k:'q',n:'Fuel flow (jet speed)',min:.5,max:4,st:.5,i:ic(IC.bolt),f:s=>(+s.q).toFixed(1)+' cm/s'},{k:'u',n:'Ventilation (co-flow)',min:0,max:.2,st:.01,i:ic(IC.arrow),f:s=>Math.round(s.u*100)+' cm/s'}];
+const W={Gravity:['r_v',s=>gl(s),'Gravity enters the momentum equation as a buoyancy force on hot, light gas. Raising it accelerates hot gas upward and thins the plume, so the flame height and width change (the solver reports the result, it does not assume a shape). At zero, only jet momentum, ventilation and diffusion move the gas. The same gravity also sets how loosely the interface panels float.'],Oxygen:['r_o2',s=>s.o2+'%','Oxygen sets the stoichiometric mixture fraction and the adiabatic flame temperature. Below roughly 1500 K the model treats the flame as not sustained (a heuristic, not a measured limit).'],Pressure:['r_p',s=>fp(s.p),'Pressure scales diffusivity and viscosity by 1/p in this model. Higher pressure means weaker diffusion, so a longer, thinner flame. Soot and radiation effects are not modeled in detail.'],Fuel:['fuel',s=>s.fuel,'Fuel sets stoichiometric oxygen demand, heat release, diffusivity and molar mass (which changes jet buoyancy). Constants are approximate textbook values.'],Temperature:['r_T',s=>s.T+' K','Temperature here is the ambient (oxidizer) temperature. Peak flame temperature is a computed output, not an input.'],Flow:['r_q',s=>(+s.q).toFixed(1)+' cm/s','Fuel flow sets how fast fuel leaves the 4 mm slot burner, so it sets the fuel supply rate. In this 2-D planar model a larger supply gives a larger flame; there is no steady microgravity flame in two dimensions, so a microgravity flame keeps growing while it runs.']};
+const WI={Gravity:IC.g,Oxygen:null,Pressure:IC.p,Fuel:IC.fuel,Temperature:IC.T,Flow:IC.bolt};
+const RM=matchMedia('(prefers-reduced-motion:reduce)');
+/* World scale: how many CSS pixels represent one millimetre of the simulated lab. */
+const PXMM=8;
+
+/*
+ * Source registry for Flame in Freefall.
+ * Every explanatory claim in the UI cites an entry here by id.
+ * Only sources listed here may be cited. Add entries only after verifying the page.
+ */
+/* Reduced-order 2-D low-Mach reacting-flow solver, used both for the whole-page world and the small chambers.
+   Collocated grid, row j=0 at the bottom, gravity along -j. Arrays have n+1 entries; index n is a permanent zero slot
+   used to drop non-fluid neighbours without branching.
+   Model: MacCormack advection, implicit diffusion (T^1.7 scaled), buoyancy from local density, composition-aware
+   thermal expansion, vorticity confinement (numerical device), simplified radiative heat-loss relaxation,
+   Burke-Schumann fast-chemistry temperature, SOR pressure projection. Not validated. */
+class Fluid{
+constructor(N,M,dxm,o){o=o||{};this.N=N;this.M=M;this.dx=dxm;const n=this.n=N*M;this.sideWall=!!o.sideWall;this.botWall=!!o.botWall;this.vc=o.vc==null?3:o.vc;this.iters=o.iters||36;this.noise=o.noise==null?.02:o.noise;
+const F=()=>new Float32Array(n+1),I=()=>new Int32Array(n);
+for(const k of['u','v','Z','L','u0','v0','t1','t2','mn','mx','sc','ph','dv','ex','Ta','ra','R','T','th','rz','Zm','bt','br','bt2','om'])this[k]=F();
+for(const k of['nl','nr','nd','nu','gl','gr','gd','gu','dl','dr','dd','du'])this[k]=I();
+this.solid=new Uint8Array(n);this.fixed=new Uint8Array(n);this.pf=new Uint8Array(n);this.nfd=new Uint8Array(n);this.wl=new Uint8Array(n);this.invD=new Float32Array(n);
+this.ik=new Int32Array(0);this.iv=new Float32Array(0);this.iz=new Float32Array(0);this.ni=0;this.pil=new Int32Array(0);this.t=0;this.jn=0;this.seed=7;
+this.cfg(S,9.81);this.mask()}
+rnd(){this.seed=(this.seed*1664525+1013904223)>>>0;return this.seed/4294967296}
+cfg(s,g){const f=FU[s.fuel],x=s.o2/100,Y=x*32/(x*32+(1-x)*28),xa=.2095,Ya=xa*32/(xa*32+(1-xa)*28),Zst=Y/(Y+f.s);
+Object.assign(this,{f,g,p:s.p,T0:s.T,uc:s.u,vj:s.q/100,Zst,dT:f.dT*Zst/(Ya/(Ya+f.s)),fm:28.97/f.M,kr:.35});this.lnT0=Math.log(s.T);this.burn=this.T0+this.dT>1500}
+thOf(z){const zm=z/(z+(1-z)*this.fm),Zs=this.Zst;return this.burn?(zm<=Zs?zm/Zs:Math.max(0,(1-zm)/(1-Zs))):0}
+reset(){for(const k of['u','v','Z','L','ph','ex'])this[k].fill(0);this.t=0;this.jn=0}
+/* Rebuild neighbour tables after this.solid / this.fixed change. Direction codes: 0 fluid, 1 wall (Neumann), 2 open (Dirichlet). */
+mask(){const{N,M,n,solid,fixed,pf,nfd,invD,wl}=this,sw=this.sideWall,bw=this.botWall;
+for(let k=0;k<n;k++)pf[k]=solid[k]||fixed[k]?0:1;
+const dir=(k,i,j,di,dj,L,G,D)=>{const a=i+di,b=j+dj;
+if(a<0||a>=N||b<0||b>=M){const open=di!==0?!sw:(dj<0?!bw:true);L[k]=n;G[k]=open?n:k;D[k]=open?k:n;return open?2:1}
+const q=b*N+a;D[k]=q;if(pf[q]){L[k]=q;G[k]=q;return 0}L[k]=n;G[k]=k;return 1};
+for(let j=0;j<M;j++)for(let i=0;i<N;i++){const k=j*N+i;let nN=0,nD=0,nf=0,c;
+c=dir(k,i,j,-1,0,this.nl,this.gl,this.dl);if(c===0)nf++;else if(c===1)nN++;else nD++;
+c=dir(k,i,j,1,0,this.nr,this.gr,this.dr);if(c===0)nf++;else if(c===1)nN++;else nD++;
+c=dir(k,i,j,0,-1,this.nd,this.gd,this.dd);if(c===0)nf++;else if(c===1)nN++;else nD++;
+c=dir(k,i,j,0,1,this.nu,this.gu,this.du);if(c===0)nf++;else if(c===1)nN++;else nD++;
+nfd[k]=nf;wl[k]=0;if(pf[k]){for(const[di,dj]of[[-1,0],[1,0],[0,-1],[0,1]]){const a=i+di,b=j+dj;if(a>=0&&a<N&&b>=0&&b<M&&!pf[b*N+a])wl[k]=1}}const den=4-nN+nD;invD[k]=pf[k]&&den>0?1/den:0}}
+setInlets(list){const m=list.length;if(this.ik.length<m){this.ik=new Int32Array(m);this.iv=new Float32Array(m);this.iz=new Float32Array(m)}
+this.ni=m;for(let q=0;q<m;q++){this.ik[q]=list[q][0];this.iv[q]=list[q][1];this.iz[q]=list[q][2]}}
+/* Igniter: cells just above the burner slot never lose heat to radiation, so the flame stays lit (a pilot-flame stand-in). */
+setPilot(a){this.pil=Int32Array.from(a)}
+applyInlets(){const{ik,iv,iz,u,v,Z,L}=this;for(let q=0;q<this.ni;q++){const k=ik[q];u[k]=0;v[k]=iv[q]*(1+this.jn);Z[k]=iz[q];L[k]=0}}
+/* Semi-Lagrangian pass; sg=+1 back-trace, -1 forward trace (for the MacCormack error estimate). */
+sl(out,s,sg,dt,mm){const{N,M,u0,v0,dx,mn,mx}=this,c=sg*dt/dx,xm=N-1.001,ym=M-1.001;
+for(let j=0;j<M;j++)for(let i=0;i<N;i++){const k=j*N+i;let x=i-c*u0[k],y=j-c*v0[k];x=x<0?0:x>xm?xm:x;y=y<0?0:y>ym?ym:y;
+const i0=x|0,j0=y|0,fx=x-i0,fy=y-j0,q=j0*N+i0,a=s[q],b=s[q+1],cc=s[q+N],d=s[q+N+1];
+out[k]=(1-fy)*((1-fx)*a+fx*b)+fy*((1-fx)*cc+fx*d);
+if(mm){mn[k]=a<b?(a<cc?(a<d?a:d):(cc<d?cc:d)):(b<cc?(b<d?b:d):(cc<d?cc:d));mx[k]=a>b?(a>cc?(a>d?a:d):(cc>d?cc:d)):(b>cc?(b>d?b:d):(cc>d?cc:d))}}}
+adv(f,dt){const{t1,t2,sc,mn,mx,n}=this;sc.set(f);this.sl(t1,sc,1,dt,1);this.sl(t2,t1,-1,dt,0);
+for(let k=0;k<n;k++){const r=t1[k]+.5*(sc[k]-t2[k]),a=mn[k],b=mx[k];f[k]=r<a?a:r>b?b:r}}
+advectAll(dt){this.u0.set(this.u);this.v0.set(this.v);this.adv(this.u,dt);this.adv(this.v,dt);this.adv(this.Z,dt);this.adv(this.L,dt);
+const{n,solid,u,v}=this;for(let k=0;k<n;k++)if(solid[k]){u[k]=0;v[k]=0}}
+/* Implicit diffusion by Gauss-Seidel; neighbours that are not fluid drop out (Neumann). */
+dif(x,c,dt,its){const{n,dx,R,nl,nr,nd,nu,nfd,pf,sc}=this,a=dt*c/(dx*dx);sc.set(x);
+for(let it=0;it<(its||3);it++)for(let k=0;k<n;k++){if(!pf[k])continue;const A=a*R[k];x[k]=(sc[k]+A*(x[nl[k]]+x[nr[k]]+x[nd[k]]+x[nu[k]]))/(1+A*nfd[k])}}
+diffuse(dt){const{n,Ta,R,lnT0,p}=this;for(let k=0;k<n;k++){const d=Ta[k]-lnT0;R[k]=d<1e-6&&d>-1e-6?1:Math.exp(1.7*d)}
+this.dif(this.Z,this.f.D/p,dt);this.dif(this.L,2.2e-5/p,dt);this.dif(this.u,1.5e-5/p,dt,2);this.dif(this.v,1.5e-5/p,dt,2)}
+}
+
+/* Fluid time stepping, projection and diagnostics. */
+Object.assign(Fluid.prototype,{
+/* Buoyant acceleration from the local density ratio rho0/rho - 1, with rho from temperature and mean molar mass. */
+buoy(dt){const{n,Z,L,v,solid,T0,dT,fm,g}=this;if(!g)return;
+for(let k=0;k<n;k++){if(solid[k])continue;const z=Z[k],t=T0+dT*this.thOf(z)*(1-L[k]),f=t/T0/(z/fm+1-z)-1;v[k]+=dt*g*(f<-.5?-.5:f>8?8:f)}},
+/* Pointer acts like a moving paddle: blend the local gas velocity toward the pointer velocity. */
+splat(p){const{N,M,u,v,pf}=this,r=p.r,R=Math.ceil(r*2.5);
+for(let j=Math.max(0,p.j-R);j<=Math.min(M-1,p.j+R);j++)for(let i=Math.max(0,p.i-R);i<=Math.min(N-1,p.i+R);i++){const k=j*N+i;if(!pf[k])continue;const w=Math.exp(-((i-p.i)**2+(j-p.j)**2)/(r*r))*p.a;u[k]+=(p.pu-u[k])*w;v[k]+=(p.pv-v[k])*w}},
+/* Vorticity confinement: a numerical device that offsets dissipation of small eddies. Not a physical model. */
+vort(dt){const{n,u,v,om,dl,dr,dd,du,pf,dx,vc}=this;if(!vc)return;
+for(let k=0;k<n;k++)om[k]=pf[k]?(v[dr[k]]-v[dl[k]]-(u[du[k]]-u[dd[k]]))/(2*dx):0;
+for(let k=0;k<n;k++){if(!pf[k])continue;const l=dl[k],r=dr[k],d=dd[k],q=du[k];
+if(l===k||r===k||d===k||q===k||!(pf[l]&&pf[r]&&pf[d]&&pf[q]))continue;
+const gx=(Math.abs(om[r])-Math.abs(om[l]))/(2*dx),gy=(Math.abs(om[q])-Math.abs(om[d]))/(2*dx),m=Math.hypot(gx,gy);if(m<1e-6)continue;
+const w=om[k]*vc*dx*dt;u[k]+=gy/m*w;v[k]-=gx/m*w}},
+clampS(){const{n,Z,L}=this;for(let k=0;k<n;k++){Z[k]=Z[k]<0?0:Z[k]>1?1:Z[k];L[k]=L[k]<0?0:L[k]>1?1:L[k]}},
+/* Log temperature and log mean-molar-mass ratio of the freshly advected material (reference for the expansion term). */
+snapT(){const{n,Z,L,Ta,ra,T0,dT,fm,lnT0}=this;for(let k=0;k<n;k++){const z=Z[k];if(z<1e-5&&L[k]<1e-5){Ta[k]=lnT0;ra[k]=0;continue}Ta[k]=Math.log(T0+dT*this.thOf(z)*(1-L[k]));ra[k]=Math.log(z/fm+1-z)}},
+/* Simplified radiative loss: relaxation of the temperature excess with rate kr*theta^2. The coefficient is uncalibrated. */
+loss(dt){const{n,Z,L,pf,kr,wl}=this;for(let k=0;k<n;k++){if(!pf[k])continue;if(wl[k]&&L[k]<.9)L[k]=.9;const te=this.thOf(Z[k])*(1-L[k]);const l=L[k]+dt*kr*te*te*(1-L[k]);L[k]=l>1?1:l}const pl=this.pil;for(let q=0;q<pl.length;q++)L[pl[q]]=0},
+/* Low-Mach volume source: div(u) = D(ln T)/Dt - D(ln M)/Dt, from the change since advection. */
+expansion(dt){const{n,Z,L,Ta,ra,ex,T0,dT,fm,pf,wl,lnT0}=this,inv=1/dt;
+for(let k=0;k<n;k++){if(!pf[k]||wl[k]){ex[k]=0;continue}const z=Z[k];if(z<1e-5&&L[k]<1e-5&&Math.abs(Ta[k]-lnT0)<1e-6){ex[k]*=.65;continue}const lt=Math.log(T0+dT*this.thOf(z)*(1-L[k])),lr=Math.log(z/fm+1-z);let e=((lt-Ta[k])-(lr-ra[k]))*inv;e=e<-25?-25:e>25?25:e;ex[k]=.65*ex[k]+.35*e}},
+project(){const{n,dx,u,v,ph,dv,ex,dl,dr,dd,du,gl,gr,gd,gu,nl,nr,nd,nu,pf,invD}=this,h2=dx*dx,om=1.85;
+for(let k=0;k<n;k++)dv[k]=pf[k]?(u[dr[k]]-u[dl[k]]+v[du[k]]-v[dd[k]])/(2*dx)-ex[k]:0;
+for(let it=0;it<this.iters;it++)for(let k=0;k<n;k++){const id=invD[k];if(!id)continue;const g=(ph[nl[k]]+ph[nr[k]]+ph[nd[k]]+ph[nu[k]]-h2*dv[k])*id;ph[k]+=om*(g-ph[k])}
+const s=1/(2*dx);for(let k=0;k<n;k++){if(!pf[k])continue;u[k]-=(ph[gr[k]]-ph[gl[k]])*s;v[k]-=(ph[gu[k]]-ph[gd[k]])*s}},
+/* Solid cells carry zero velocity and copy the mean of neighbouring fluid scalars so walls do not drain the flame. */
+zeroSolid(){const{N,M,solid,u,v,Z,L}=this;
+for(let j=0;j<M;j++)for(let i=0;i<N;i++){const k=j*N+i;
+if(!solid[k]){if(u[k]>8)u[k]=8;else if(u[k]<-8)u[k]=-8;if(v[k]>8)v[k]=8;else if(v[k]<-8)v[k]=-8;continue}
+u[k]=0;v[k]=0;let s=0,l=0,c=0;
+if(i>0&&!solid[k-1]){s+=Z[k-1];l+=L[k-1];c++}if(i<N-1&&!solid[k+1]){s+=Z[k+1];l+=L[k+1];c++}
+if(j>0&&!solid[k-N]){s+=Z[k-N];l+=L[k-N];c++}if(j<M-1&&!solid[k+N]){s+=Z[k+N];l+=L[k+N];c++}
+Z[k]=c?s/c:0;L[k]=c?l/c:0}},
+step(dt,c){c=c||{};this.jn=this.jn*.92+(this.rnd()-.5)*this.noise;
+this.buoy(dt);if(c.ptr)this.splat(c.ptr);this.vort(dt);this.advectAll(dt);this.clampS();this.snapT();this.diffuse(dt);this.loss(dt);this.clampS();
+this.expansion(dt);this.applyInlets();this.project();this.zeroSolid();this.applyInlets();this.t+=dt},
+blur(a,tmp){const{N,M}=this;
+for(let j=0;j<M;j++)for(let i=0;i<N;i++){const k=j*N+i;tmp[k]=(a[i>0?k-1:k]+2*a[k]+a[i<N-1?k+1:k])*.25}
+for(let j=0;j<M;j++)for(let i=0;i<N;i++){const k=j*N+i;a[k]=(tmp[j>0?k-N:k]+2*tmp[k]+tmp[j<M-1?k+N:k])*.25}},
+/* Derived fields for rendering and measurement: mixture fraction, temperature, reaction-sheet intensity and blurred glow. */
+finalize(){const{n,Z,L,T0,dT,fm,Zst,burn,th,rz,T,Zm,solid,bt,br,bt2}=this,wz=.3*Zst+.02;
+for(let k=0;k<n;k++){const z=Z[k],zm=z/(z+(1-z)*fm);Zm[k]=zm;
+const t0=burn?(zm<=Zst?zm/Zst:Math.max(0,(1-zm)/(1-Zst))):0,e=t0*(1-L[k]);
+th[k]=solid[k]?0:e;T[k]=T0+dT*e;const d=(zm-Zst)/wz,r=burn?Math.max(0,Math.exp(-d*d)-.15)/.85:0;rz[k]=solid[k]?0:r*(1-.5*L[k])}
+bt.set(th);br.set(rz);this.blur(bt,bt2);this.blur(br,bt2)},
+/* Flame extent: bounding box of cells whose normalised temperature rise is at least 30% of the adiabatic rise (a model criterion,
+   not an optical measurement), inside a cell window, plus the peak temperature in that window. */
+measure(i0,i1,j0){const{N,M,th,burn,T,pf,dx}=this;let mn=1e9,mx=-1,a=1e9,b=-1,pk=0;i0=Math.max(0,i0);i1=Math.min(N-1,i1);j0=Math.max(0,j0);
+for(let j=j0;j<M;j++)for(let i=i0;i<=i1;i++){const k=j*N+i;if(T[k]>pk)pk=T[k];if(!burn||!pf[k]||th[k]<.3)continue;if(j<mn)mn=j;if(j>mx)mx=j;if(i<a)a=i;if(i>b)b=i}
+const d=dx*1000;return{pk,h:mx<0?0:(mx-mn+1)*d,w:mx<0?0:(b-a+1)*d}},
+/* Shift all fields upward by sj rows (page scroll): the gas stays attached to the page content. */
+pan(sj){const{N,M}=this,fs=[this.u,this.v,this.Z,this.L,this.ph];if(Math.abs(sj)>=M){for(const f of fs)f.fill(0);return}
+const tmp=this.t1;for(const f of fs){tmp.set(f);for(let j=0;j<M;j++){const y=j-sj;for(let i=0;i<N;i++){const k=j*N+i;if(y<0||y>M-1){f[k]=0;continue}const j0=Math.min(y|0,M-2),fy=y-j0,q=j0*N+i;f[k]=tmp[q]*(1-fy)+tmp[q+N]*fy}}}},
+/* Largest residual divergence after projection (diagnostic). */
+divResidual(){const{n,u,v,dl,dr,dd,du,pf,dx,ex}=this;let mx=0,sum=0,c=0;for(let k=0;k<n;k++){if(!pf[k])continue;const d=Math.abs((u[dr[k]]-u[dl[k]]+v[du[k]]-v[dd[k]])/(2*dx)-ex[k]);if(d>mx)mx=d;sum+=d;c++}return{max:mx,mean:c?sum/c:0}}
+});
+
+/* High-density WebGL2 renderer. Solver fields are uploaded as half-float textures and reconstructed per screen pixel with
+   a cubic B-spline (4 bilinear taps), so no grid cell or screen pixel edges are visible at any device pixel ratio.
+   Fine texture detail comes from procedural noise advected along the solved velocity (two-phase flow map); it is a visual
+   device only and is not part of the physics. Colours are an illustrative blackbody-style ramp of the model temperature. */
+const VS=`#version 300 es
+in vec2 p;out vec2 uv;void main(){uv=p*.5+.5;gl_Position=vec4(p,0.,1.);}`;
+const FS=`#version 300 es
+precision highp float;in vec2 uv;out vec4 o;
+uniform sampler2D A,B;uniform vec2 gs,res;uniform float time,soot,fade,detail;
+vec4 bs(sampler2D s,vec2 c){vec2 x=c*gs-.5,f=fract(x),i=floor(x);
+vec2 w0=(1.-f)*(1.-f)*(1.-f)/6.,w1=(4.-6.*f*f+3.*f*f*f)/6.,w3=f*f*f/6.,w2=1.-w0-w1-w3;
+vec2 g0=w0+w1,g1=w2+w3,h0=(i-1.+w1/g0+.5)/gs,h1=(i+1.+w3/g1+.5)/gs;
+return g0.y*(g0.x*texture(s,vec2(h0.x,h0.y))+g1.x*texture(s,vec2(h1.x,h0.y)))+g1.y*(g0.x*texture(s,vec2(h0.x,h1.y))+g1.x*texture(s,vec2(h1.x,h1.y)));}
+float hs(vec2 q){return fract(sin(dot(q,vec2(127.1,311.7)))*43758.5453);}
+float vn(vec2 q){vec2 i=floor(q),f=fract(q);f=f*f*(3.-2.*f);return mix(mix(hs(i),hs(i+vec2(1,0)),f.x),mix(hs(i+vec2(0,1)),hs(i+vec2(1,1)),f.x),f.y);}
+float fb(vec2 q){return .55*vn(q)+.3*vn(q*2.03+7.1)+.15*vn(q*4.1+3.7);}
+vec3 ramp(float t){vec3 c=mix(vec3(.35,.03,.02),vec3(1.,.38,.06),smoothstep(.05,.38,t));c=mix(c,vec3(1.,.8,.32),smoothstep(.3,.7,t));return mix(c,vec3(1.,.96,.82),smoothstep(.68,1.,t));}
+void main(){vec2 c=uv;vec4 d=bs(A,c);float th=d.r,rz=d.g,sol=d.a;
+if(th+rz<.004){o=vec4(0.);return;}
+vec2 vel=bs(B,c).rg;
+float ph=time*.9,f0=fract(ph),f1=fract(ph+.5),bl=abs(2.*f0-1.);
+vec2 asp=vec2(res.x/res.y,1.)*7.;vec2 q=c*asp;vec2 vv=vel*vec2(1.,1.)*.35;
+float n0=fb(q-vv*f0*4.+vec2(0,ph*.15)),n1=fb(q+3.3-vv*f1*4.+vec2(0,(ph+.5)*.15));float nz=mix(n0,n1,bl);
+float body=clamp(th*(1.+detail*(nz-.5)*1.1),0.,1.);
+float edge=smoothstep(.015,.2,body);
+vec3 col=ramp(body);
+float core=smoothstep(.12,.55,rz);col=mix(col,vec3(.22,.42,1.),core*(1.-smoothstep(.2,.7,th))*.85);
+float glow=pow(max(th,0.),1.6);float a=clamp(edge*.92+glow*.25,0.,1.);
+float haze=smoothstep(.002,.05,th)*.10;
+vec3 sm=vec3(.07,.06,.08)*soot*smoothstep(.1,.5,th)*(.4+.6*nz);
+float sa=clamp(a+haze,0.,1.)*fade*(1.-smoothstep(.35,.65,sol));
+vec3 rgb=col*a+vec3(.9,.38,.15)*haze*.6+sm*.5;
+o=vec4(rgb*fade*(1.-smoothstep(.35,.65,sol)),sa);}`;
+class Renderer{
+constructor(cv,opt){this.cv=cv;opt=opt||{};this.dprMax=opt.dpr||2;this.maxPx=opt.maxPx||5e6;const gl=this.gl=opt.no3d?null:cv.getContext('webgl2',{alpha:true,premultipliedAlpha:true,antialias:false,powerPreference:'high-performance'});
+this.ok=!!gl;if(!gl){this.c2=cv.getContext('2d');this.off=document.createElement('canvas');return}
+const sh=(t,s)=>{const x=gl.createShader(t);gl.shaderSource(x,s);gl.compileShader(x);if(!gl.getShaderParameter(x,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(x));return x};
+const pr=this.pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,VS));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(pr);
+if(!gl.getProgramParameter(pr,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(pr));
+gl.useProgram(pr);const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+const l=gl.getAttribLocation(pr,'p');gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,2,gl.FLOAT,false,0,0);
+this.U={};for(const k of['A','B','gs','res','time','soot','fade','detail'])this.U[k]=gl.getUniformLocation(pr,k);
+const tx=u=>{const t=gl.createTexture();gl.activeTexture(gl.TEXTURE0+u);gl.bindTexture(gl.TEXTURE_2D,t);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);return t};
+this.tA=tx(0);this.tB=tx(1);gl.uniform1i(this.U.A,0);gl.uniform1i(this.U.B,1);
+gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);this.sz=''}
+size(cssW,cssH){const d=Math.min(this.dprMax,devicePixelRatio||1,Math.sqrt(this.maxPx/(cssW*cssH)))*(this.scale||1);const w=Math.round(cssW*d),h=Math.round(cssH*d);
+if(this.cv.width!==w||this.cv.height!==h){this.cv.width=w;this.cv.height=h}this.dpr=d;return d}
+/* Upload fields. Row 0 of the solver is the bottom of the screen, which is also texture row 0 (v=0), so no flip is needed. */
+draw(f,o){o=o||{};const{N,M,n}=f;
+if(!this.ok)return this.draw2d(f,o);
+const gl=this.gl;if(this.sz!==N+'x'+M){this.sz=N+'x'+M;this.bufA=new Float32Array(n*4);this.bufB=new Float32Array(n*2)}
+const A=this.bufA,B=this.bufB,bt=f.bt,br=f.br,sd=f.solid,fx=f.fixed,u=f.u,v=f.v;
+for(let k=0,a=0,b=0;k<n;k++,a+=4,b+=2){A[a]=bt[k];A[a+1]=br[k];A[a+2]=0;A[a+3]=sd[k]|fx[k]?1:0;B[b]=u[k];B[b+1]=v[k]}
+gl.viewport(0,0,this.cv.width,this.cv.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
+gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.tA);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA16F,N,M,0,gl.RGBA,gl.FLOAT,A);
+gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,this.tB);gl.texImage2D(gl.TEXTURE_2D,0,gl.RG16F,N,M,0,gl.RG,gl.FLOAT,B);
+gl.uniform2f(this.U.gs,N,M);gl.uniform2f(this.U.res,this.cv.width,this.cv.height);gl.uniform1f(this.U.time,o.time||0);
+gl.uniform1f(this.U.soot,o.soot==null?1:o.soot);gl.uniform1f(this.U.fade,o.fade==null?1:o.fade);gl.uniform1f(this.U.detail,o.detail==null?1:o.detail);
+gl.drawArrays(gl.TRIANGLES,0,3)}
+/* Fallback without WebGL2: small canvas stretched with browser smoothing (lower quality, flagged in the UI). */
+draw2d(f,o){const{N,M,n}=f,c=this.off;if(c.width!==N||c.height!==M){c.width=N;c.height=M;this.img=new ImageData(N,M)}
+const d=this.img.data;for(let j=0;j<M;j++)for(let i=0;i<N;i++){const k=j*N+i,q=((M-1-j)*N+i)*4,t=f.bt[k],r=f.br[k],s=f.solid[k]|f.fixed[k];
+d[q]=255*Math.min(1,t*1.6+.1*r);d[q+1]=255*Math.min(1,Math.max(0,t*1.3-.2)+.4*r);d[q+2]=255*Math.min(1,Math.max(0,t-.6)*2+r*.9);d[q+3]=s?0:255*Math.min(1,t*1.5)}
+c.getContext('2d').putImageData(this.img,0,0);const x=this.c2;x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.clearRect(0,0,this.cv.width,this.cv.height);x.drawImage(c,0,0,this.cv.width,this.cv.height)}
+}
+
+/* Whole-page world: one Fluid solver sized to the viewport. Elements marked [data-solid] become solid obstacles,
+   the burner is a draggable plate with a slot inlet, the pointer is a paddle, and page scroll pans the gas. */
+class World{
+constructor(){this.cell=cl(Math.round(Math.sqrt(innerWidth*innerHeight/11000)),7,12);this.build();this.ptr={x:-1,y:-1,vx:0,vy:0,on:0,t:0};
+this.burner={x:innerWidth*.5,y:innerWidth<=860?innerHeight-50:innerHeight*.72};this.lastScroll=scrollY;this.acc=0;this.ms=8;this.sub=1;this.rects=[];this.rev=0}
+build(){const c=this.cell;this.N=Math.ceil(innerWidth/c);this.M=Math.ceil(innerHeight/c);
+this.dx=c/PXMM/1000;this.f=new Fluid(this.N,this.M,this.dx,{sideWall:false,botWall:false,vc:3.5,iters:14,noise:.03});this.f.cfg(S,geff(S))}
+/* CSS px (viewport, y down) -> cell index (row 0 at bottom). */
+ci(x,y){return[Math.floor(x/this.cell),Math.floor((innerHeight-y)/this.cell)]}
+cx(i){return(i+.5)*this.cell}cy(j){return innerHeight-(j+.5)*this.cell}
+/* Collect obstacle rectangles from the DOM (document coordinates, so scrolling does not need re-measuring). */
+scan(){const sy=scrollY,sx=scrollX;this.rects=$$('[data-solid]').map(e=>{const r=e.getBoundingClientRect(),ox=e._ox||0,oy=e._oy||0,fx=/fixed|sticky/.test(getComputedStyle(e).position);const a=fx?0:sx,b=fx?0:sy;return{e,fx,x0:r.left-ox+a,x1:r.right-ox+a,y0:r.top-oy+b,y1:r.bottom-oy+b}}).filter(r=>r.x1-r.x0>8&&r.y1-r.y0>8);this.dirty=1}
+/* Rebuild the solid mask for the current scroll and burner position, and the inlet list. */
+remask(){const f=this.f,{N,M}=this,sy=scrollY,sx=scrollX,c=this.cell;f.solid.fill(0);f.fixed.fill(0);
+const box=(x0,y0,x1,y1)=>{const i0=Math.max(0,Math.floor(x0/c)),i1=Math.min(N-1,Math.floor((x1-1)/c)),jb=Math.max(0,Math.floor((innerHeight-y1)/c)),jt=Math.min(M-1,Math.floor((innerHeight-y0-1)/c));
+for(let j=jb;j<=jt;j++)for(let i=i0;i<=i1;i++)f.solid[j*N+i]=1};
+for(const r of this.rects){const a=r.fx?0:sx,b=r.fx?0:sy,y0=r.y0-b,y1=r.y1-b;if(y1<0||y0>innerHeight)continue;box(r.x0-a,y0,r.x1-a,y1)}
+const b=this.burner,[bi,bj]=this.ci(b.x,b.y),hw=Math.max(2,Math.round(4/(this.dx*1000)/2)),pw=hw+5;
+for(let j=bj-1;j<=bj;j++)for(let i=bi-pw;i<=bi+pw;i++)if(i>=0&&i<N&&j>=0&&j<M)f.solid[j*N+i]=1;
+for(let j=0;j<bj-1;j++)for(let i=bi-pw+1;i<=bi+pw-1;i++)if(i>=0&&i<N)f.solid[j*N+i]=1;
+const il=[];const jj=bj+1;if(jj<M)for(let i=bi-hw;i<=bi+hw;i++)if(i>=0&&i<N){f.solid[bj*N+i]=0;const q=(i-bi)/hw,v=f.vj*1.5*(1-q*q)*.67+f.vj*.5;il.push([bj*N+i,v,1])}
+/* slot cells are inlets: held at fuel mixture fraction 1, and fixed so pressure treats them as sources */
+for(const e of il)f.fixed[e[0]]=1;
+/* side co-flow of fresh air at the plate edges */
+const cf=[];for(let j=bj+1;j<=Math.min(M-1,bj+2);j++){for(const i of[bi-pw-1,bi+pw+1])if(i>=0&&i<N&&!f.solid[j*N+i]){f.fixed[j*N+i]=1;cf.push([j*N+i,S.u,0])}}
+const pil=[];for(let j=bj+1;j<=Math.min(M-1,bj+4);j++)for(let i=bi-hw-2;i<=bi+hw+2;i++)if(i>=0&&i<N&&!f.solid[j*N+i]&&!f.fixed[j*N+i])pil.push(j*N+i);f.setPilot(pil);
+this.inl=il.concat(cf);f.setInlets(this.inl);f.mask();this.bi=bi;this.bj=bj;this.pw=pw;this.dirty=0}
+/* Pointer paddle: velocity in cells/s converted to m/s. */
+pointer(x,y,t){const p=this.ptr;if(p.on){const dt=Math.max(.008,(t-p.t)/1000);p.vx=p.vx*.5+.5*(x-p.x)/dt;p.vy=p.vy*.5+.5*(y-p.y)/dt}p.x=x;p.y=y;p.t=t;p.on=1;p.age=0}
+leave(){this.ptr.on=0}
+paddle(){const p=this.ptr;if(!p.on||p.age>6)return null;const[i,j]=this.ci(p.x,p.y);const k=1/PXMM/1000;
+return{i,j,r:Math.max(3,60/this.cell),a:.35,pu:cl(p.vx*k,-1.5,1.5),pv:cl(-p.vy*k,-1.5,1.5)}}
+moveBurner(x,y){this.burner.x=cl(x,60,innerWidth-60);this.burner.y=cl(y,120,innerHeight-30);this.dirty=1;this.remask();this.onMove&&this.onMove()}
+/* Advance by real elapsed seconds; fixed solver step, governed by measured cost. */
+update(sec,paused){const f=this.f;
+const ds=scrollY-this.lastScroll;this.lastScroll=scrollY;this.scrolling=Math.abs(ds)>0?8:Math.max(0,(this.scrolling||0)-1);if(ds||this.dirty)this.remask();
+if(paused)return;
+/* One solver step per frame with the real (smoothed) frame time. The advection is unconditionally stable, so the flame keeps real-time pace even when frames are slow. */
+this.accs=(this.accs||0)+Math.min(sec,.05);if(this.half){this.fc^=1;if(this.fc)return}
+this.sdt=(this.sdt||.016)*.8+this.accs*.2;this.accs=0;const dt=cl(this.sdt,.008,.034),t0=performance.now();
+const p=this.paddle();f.step(dt,{ptr:p});if(this.ptr.on)this.ptr.age+=1;
+f.finalize();const ms=performance.now()-t0;this.ms=this.ms*.9+ms*.1;
+if(this.ms>7&&this.f.iters>8)this.f.iters-=1;else if(this.ms<4.5&&this.f.iters<24)this.f.iters+=1}
+reconfig(){this.f.cfg(S,geff(S));this.dirty=1}
+resize(){const old=this.f;this.build();this.scan();this.remask();void old}
+reset(){this.f.reset();this.dirty=1}
+}
+
+/* Interface body physics. Each [data-solid] panel is a lumped thermal mass and a spring-mounted body that reacts to the gas
+   around its perimeter. This is an interface effect, not a conjugate heat-transfer calculation. */
+class UIPhys{
+constructor(w){this.w=w;this.it=[];this.acc=0;this.hot={name:'',dT:0}}
+rebuild(){const old=new Map(this.it.map(o=>[o.e,o]));this.it=this.w.rects.map((r,i)=>{const p=old.get(r.e);return p?Object.assign(p,{r}):{e:r.e,r,Ts:S.T,ox:r.e._ox||0,oy:r.e._oy||0,vx:0,vy:0,fx:0,fy:0,ph:i*1.7,name:r.e.dataset.name||r.e.querySelector('h1,h2')?.textContent||'Panel'}})}
+/* Mean gas temperature and velocity in a ring three cells outside the rectangle (beyond the one-cell wall-quench layer) (viewport coordinates, CSS px). */
+ring(o,sy,sx){const w=this.w,f=w.f,c=w.cell,N=w.N,M=w.M,fx=o.r.fx,x0=o.r.x0-(fx?0:sx),x1=o.r.x1-(fx?0:sx),y0=o.r.y0-(fx?0:sy),y1=o.r.y1-(fx?0:sy);
+if(y1<-c||y0>innerHeight+c||x1<0||x0>innerWidth)return null;
+let sT=0,wT=0,su=0,sv=0,n=0;const add=(i,j)=>{if(i<0||j<0||i>=N||j>=M)return;const k=j*N+i;if(!f.pf[k])return;sT+=f.T[k]*f.T[k];wT+=f.T[k];su+=f.u[k];sv+=f.v[k];n++};
+const e=3,i0=Math.floor(x0/c)-e,i1=Math.floor((x1-1)/c)+e,jb=Math.floor((innerHeight-y1)/c)-e,jt=Math.floor((innerHeight-y0-1)/c)+e;
+const stp=Math.max(1,Math.round((i1-i0)/40));for(let i=i0;i<=i1;i+=stp){add(i,jb);add(i,jt)}
+const sp=Math.max(1,Math.round((jt-jb)/40));for(let j=jb;j<=jt;j+=sp){add(i0,j);add(i1,j)}
+return n?{T:sT/wT,u:su/n,v:sv/n}:null}
+/* Runs every frame with the real elapsed time so motion stays in step with scrolling. Flow forcing is low-pass filtered and
+   switched off while the page scrolls, so panels settle instead of jittering when the obstacle mask moves through the gas. */
+update(dt,paused,t){if(paused)return;dt=Math.min(dt,.033);const sy=scrollY,sx=scrollX,g=geff(S)/9.81,k=26+150*g,cd=2*Math.sqrt(k)*(.3+.5*g),move=!RM.matches,sc=this.w.scrolling>0,a=1-Math.exp(-dt/.35);let best=null;
+this.rr=(this.rr||0)+1;
+for(const o of this.it){let s=null;if(this.rr%2===0||!o.s0){s=this.ring(o,sy,sx);o.s0=s||{T:S.T,u:0,v:0}}else s=o.s0;
+const Tg=s?s.T:S.T;o.Ts+=dt*(1.3*(Tg-o.Ts)-.18*(o.Ts-S.T));const hv=cl((o.Ts-S.T)/90,0,1);if(Math.abs(hv-(o.hv||0))>.004){o.hv=hv;o.e.style.setProperty('--heat',hv.toFixed(3))}
+if(!best||o.Ts>best.Ts)best=o;
+if(!move||o.r.fx){if(o.ox||o.oy){o.ox=o.oy=0;o.e._ox=o.e._oy=0;o.e.style.transform=''}continue}
+const kk=PXMM*1000*.02;let tx=sc||!s?0:cl(s.u*kk,-5,5),ty=sc||!s?0:cl(-s.v*kk,-5,5);
+o.fx+=(tx-o.fx)*a;o.fy+=(ty-o.fy)*a;
+const dr=(1-g)*1.6;tx=o.fx+dr*Math.sin(t*.6+o.ph);ty=o.fy+3.5*g+dr*Math.sin(t*.45+o.ph*1.7);
+o.vx+=dt*(k*(tx-o.ox)-cd*o.vx);o.vy+=dt*(k*(ty-o.oy)-cd*o.vy);o.ox+=dt*o.vx;o.oy+=dt*o.vy;
+o.ox=cl(o.ox,-8,8);o.oy=cl(o.oy,-8,8);o.e._ox=o.ox;o.e._oy=o.oy;o.e.style.transform='translate3d('+o.ox.toFixed(2)+'px,'+o.oy.toFixed(2)+'px,0)'}
+this.hot=best?{name:best.name,dT:best.Ts-S.T}:{name:'',dT:0}}
+}
+
+/* Controlled comparison chambers: two identical boxed 2-D domains that differ only in gravity. */
+class Chamber{
+constructor(cv,g){this.cv=cv;this.g=g;this.N=64;this.M=96;this.f=new Fluid(this.N,this.M,.001,{sideWall:true,botWall:true,vc:3,iters:10,noise:.03});
+try{this.r=new Renderer(cv,{dpr:2,maxPx:1.6e6})}catch(e){this.r=new Renderer(cv,{no3d:true})}this.vis=true;this.setup()}
+setup(){const f=this.f,{N}=this,bi=N>>1,hw=2,il=[];f.solid.fill(0);f.fixed.fill(0);this.cfg();
+for(let i=bi-hw;i<=bi+hw;i++){const q=(i-bi)/hw;f.fixed[i]=1;il.push([i,f.vj*(.5+1.0*(1-q*q)*.67),1])}
+f.setInlets(il);f.mask();this.pilot()}
+pilot(){const f=this.f,{N}=this,a=[];for(let j=1;j<=4;j++)for(let i=N/2-4;i<=N/2+4;i++)a.push(j*N+i);f.setPilot(a)}
+cfg(){this.f.cfg(S,this.g);this.setup0=1}
+reconfig(){const f=this.f,{N}=this,bi=N>>1,hw=2,il=[];f.cfg(S,this.g);for(let i=bi-hw;i<=bi+hw;i++){const q=(i-bi)/hw;il.push([i,f.vj*(.5+1.0*(1-q*q)*.67),1])}f.setInlets(il)}
+reset(){this.f.reset()}
+step(){this.f.step(.034,{});this.f.finalize()}
+draw(t){const c=this.cv,w=c.clientWidth||200,h=c.clientHeight||300;this.r.size(w,h);this.r.draw(this.f,{time:t,detail:.8,soot:this.g>0?1:0})}
+measure(){return this.f.measure(0,this.N-1,1)}
+}
+
+
+</script>
+<script>
+/* Flame Lab backdrop: procedural planets, milky way and sky. Visual only. */
+/* Procedural realistic sky, generated on the visitor's device (no images): near-black background, a faint Milky Way with dust lanes,
+   distant spiral and elliptical galaxies, stars coloured by spectral type, two lit planets and tumbling rocky asteroids.
+   Everything is illustrative; none of it represents a real catalogue position. The static layer is painted once; only small
+   dirty rectangles (star glints, asteroids) are redrawn per frame, which keeps frames cheap under the glass panels. */
+const NZ=(()=>{const P=new Uint8Array(512);let s=1234567;for(let i=0;i<256;i++)P[i]=i;for(let i=255;i>0;i--){s=(s*1664525+1013904223)>>>0;const j=s%(i+1),t=P[i];P[i]=P[j];P[j]=t}for(let i=0;i<256;i++)P[i+256]=P[i];
+const gr=(h,x,y)=>{const a=(h&7)*.7853982;return Math.cos(a)*x+Math.sin(a)*y},fd=t=>t*t*t*(t*(t*6-15)+10);
+const n=(x,y)=>{const X=Math.floor(x),Y=Math.floor(y),xf=x-X,yf=y-Y,xi=X&255,yi=Y&255,u=fd(xf),v=fd(yf),aa=P[P[xi]+yi],ab=P[P[xi]+yi+1],ba=P[P[xi+1]+yi],bb=P[P[xi+1]+yi+1];
+const a=gr(aa,xf,yf),b=gr(ba,xf-1,yf),c=gr(ab,xf,yf-1),d=gr(bb,xf-1,yf-1),l1=a+(b-a)*u,l2=c+(d-c)*u;return l1+(l2-l1)*v};
+const f=(x,y,o)=>{let a=0,m=.5,q=1;for(let i=0;i<o;i++){a+=m*n(x*q,y*q);q*=2.03;m*=.5;x+=17.3;y+=9.1}return a};return{n,f}})();
+const sm=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t)},mx=(a,b,t)=>a+(b-a)*t;
+const tick=()=>new Promise(r=>setTimeout(r,0));
+/* Fill an ImageData row by row, yielding to the browser every ~10 ms so the page stays responsive. */
+async function paint(w,h,fn){const im=new ImageData(w,h),d=im.data;let t0=performance.now();for(let y=0;y<h;y++){for(let x=0;x<w;x++){const q=(y*w+x)*4,c=fn(x,y);d[q]=c[0];d[q+1]=c[1];d[q+2]=c[2];d[q+3]=c[3]}if(performance.now()-t0>10){await tick();t0=performance.now()}}return im}
+const cv2=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+/* Light comes from the upper left everywhere (planets and asteroids), as if from one distant star. */
+const LX=-.62,LY=-.5,LZ=.6;
+async function milky(W,H){const k=.3,w=Math.round(W*k),h=Math.round(H*k),A=-.5,ca=Math.cos(A),sa=Math.sin(A);
+const im=await paint(w,h,(x,y)=>{const px=(x/w-.5)*W/H,py=y/h-.5,t=ca*px+sa*py,u=-sa*px+ca*py,wd=.13+.05*NZ.f(t*1.3+4,3,3),dens=Math.exp(-((u/wd)**2))*(.5+1.1*NZ.f(t*2.4,u*2.4+8,5)+.35);
+const dust=Math.abs(NZ.f(t*4.5+3,u*6,5)),lane=.3+.7*sm(0,.2,dust),core=1-.65*Math.exp(-((u/(wd*.3))**2)),I=Math.max(0,dens)*lane*core,warm=sm(-.5,.5,NZ.f(t*1.1,u*1.1+2,3))*.8,hii=Math.max(0,NZ.f(t*7+9,u*7,3))**2*Math.max(0,dens);
+const r=(mx(.62,1,warm)*I*.20+hii*.07)*255,g=(mx(.72,.86,warm)*I*.20+hii*.012)*255,b=(mx(.95,.68,warm)*I*.20+hii*.025)*255;return[r,g,b,255]});
+return im}
+async function galaxy(S,seed,type,tilt,rot){const c=Math.cos(rot),s=Math.sin(rot);return paint(S,S,(x,y)=>{let X=(x/S-.5)*2,Y=(y/S-.5)*2;const rx=c*X+s*Y,ry=(-s*X+c*Y)/tilt,r=Math.hypot(rx,ry);if(r>1)return[0,0,0,0];const th=Math.atan2(ry,rx),edge=sm(1,.55,r);let I,arm=0,kn=0;
+if(type===0){const bulge=Math.exp(-((r/.11)**1.1))*1.3,disk=Math.exp(-r/.3);arm=Math.cos(2*(th-3.3*Math.log(r+.04))+seed)*.5+.5;arm*=arm;const nz=.6+.9*(NZ.f(rx*6+seed,ry*6,4)+.5);I=(bulge+disk*(.18+.9*arm)*nz*sm(0,.12,r))*edge;kn=Math.max(0,NZ.f(rx*20+seed,ry*20,2))**3*arm*disk*sm(.1,.4,r);const dl=1-.55*Math.exp(-(((ry*tilt)/.06)**2))*(tilt<.5?1:.3);I*=dl}
+else{I=Math.exp(-((r/.32)**.55))*edge*1.1}
+I=Math.min(1.4,I);const w=Math.min(1,arm*.9+r*.8),R=mx(255,175,w),G=mx(224,198,w),B=mx(170,255,w),a=Math.min(1,I*.9);return[Math.min(255,(R*I+kn*255*1.2)*1),Math.min(255,(G*I+kn*120)),Math.min(255,(B*I+kn*170)),Math.min(255,a*255)]})}
+const SPEC=[[165,190,255,.1],[225,235,255,.22],[255,247,232,.26],[255,226,180,.24],[255,176,126,.18]];
+const spec=r=>{let a=0;for(const s of SPEC){a+=s[3];if(r<a)return s}return SPEC[4]};
+function planetGas(S,seed){const R=S/2;return paint(S,S,(x,y)=>{const nx=(x+.5-R)/R,ny=(y+.5-R)/R,r2=nx*nx+ny*ny;if(r2>1.02)return[0,0,0,0];const nz=Math.sqrt(Math.max(0,1-r2)),lat=Math.asin(Math.max(-1,Math.min(1,-ny))),lon=Math.atan2(nx,nz);
+const dist=NZ.f(lon*1.4+seed,lat*4.5,4),band=Math.sin(lat*13+2.4*dist)*.5+.5,fine=NZ.f(lon*7,lat*38+seed,4),b2=Math.sin(lat*31+3*dist)*.5+.5;
+let r=mx(150,232,band)+fine*40,g=mx(105,190,band)+fine*34,b=mx(70,150,band)+fine*26;const sp=Math.exp(-(((lon-.55)/.28)**2+((lat+.34)/.1)**2));r=mx(r,200,sp*.7);g=mx(g,92,sp*.7);b=mx(b,70,sp*.7);r*=mx(.82,1.06,b2);g*=mx(.84,1.04,b2);
+const dif=Math.max(0,nx*LX-ny*LY*-1*0+(-ny)*(-LY)*0+nx*LX*0)+0;const dt=nx*LX+ny*LY+nz*LZ,lit=sm(-.08,.45,dt)*Math.max(0,dt*.5+.5),limb=.5+.5*Math.sqrt(nz),sh=(.012+lit*1.05)*limb,rim=Math.pow(1-nz,4)*sm(-.2,.5,dt)*.35;
+const a=sm(1.02,.985,Math.sqrt(r2));return[Math.min(255,r*sh+rim*255*.9),Math.min(255,g*sh+rim*255*.75),Math.min(255,b*sh+rim*255*.55),a*255]})}
+function planetWorld(S,seed){const R=S/2;return paint(S,S,(x,y)=>{const nx=(x+.5-R)/R,ny=(y+.5-R)/R,r2=nx*nx+ny*ny;if(r2>1.05)return[0,0,0,0];const nz=Math.sqrt(Math.max(0,1-r2)),lat=Math.asin(Math.max(-1,Math.min(1,-ny))),lon=Math.atan2(nx,nz);
+const h=NZ.f(lon*2.1+seed,lat*2.1,6)+.04,land=h>.03,ice=Math.abs(lat)>1.12+.12*NZ.f(lon*3,seed,3);let r,g,b;
+if(ice){r=225;g=232;b=240}else if(land){const t=NZ.f(lon*5+3,lat*5,4)+.5,ar=sm(.1,.55,Math.abs(lat)*.7+t*.5);r=mx(70,150,t*.9+ar*.1);g=mx(98,128,t*.9);b=mx(48,84,t*.9)}else{const d=sm(.03,-.25,h);r=mx(24,5,d);g=mx(78,22,d);b=mx(122,52,d)}
+const cl0=sm(.0,.34,NZ.f(lon*3.4+9,lat*3.6,5)+.06+.1*NZ.f(lon*9,lat*9,3)),cc=cl0*.82;r=mx(r,246,cc);g=mx(g,248,cc);b=mx(b,252,cc);
+const dt=nx*LX+ny*LY+nz*LZ,lit=sm(-.06,.4,dt)*Math.max(0,dt*.55+.45),limb=.45+.55*Math.sqrt(nz),sh=(.006+lit*1.08)*limb,sp=!land&&!ice?Math.pow(Math.max(0,(nx*LX+ny*LY+nz*LZ)*.5+.5),24)*.22*(1-cc):0,at=Math.pow(1-nz,2.6)*(.18+Math.max(0,dt)*1.1);
+const a=sm(1.05,.99,Math.sqrt(r2));return[Math.min(255,r*sh+sp*255+at*95),Math.min(255,g*sh+sp*255+at*165),Math.min(255,b*sh+sp*255+at*255),a*255]})}
+/* Rocky asteroid: noise-displaced silhouette, fractal relief and craters, lit by the common light with the texture tumbling under it. */
+async function rock(S,seed,k,K){const phi=k/K*6.2832,cp=Math.cos(phi),sp=Math.sin(phi),sd=seed*7.3;const cr=[];let q=seed*977+13;const rr=()=>{q=(q*1664525+1013904223)>>>0;return q/4294967296};for(let i=0;i<8;i++)cr.push([(rr()-.5)*1.3,(rr()-.5)*1.3,.1+rr()*.22]);
+const H=(tx,ty,rn)=>{let h=.5*Math.sqrt(Math.max(0,1-rn*rn))+.2*NZ.f(tx*2.4+sd,ty*2.4,5);for(const c of cr){const d=Math.hypot(tx-c[0],ty-c[1])/c[2];if(d<1.25)h+=d<1?-(1-d*d)*.1*c[2]*4:Math.exp(-(((d-1.1)*9)**2))*.018}return h};
+return paint(S,S,(x,y)=>{const X=(x+.5)/S*2-1,Y=(y+.5)/S*2-1,tx=cp*X+sp*Y,ty=-sp*X+cp*Y,a=Math.atan2(ty,tx),Rr=.76+.15*NZ.n(Math.cos(a)*1.3+sd,Math.sin(a)*1.3+sd)+.07*NZ.n(Math.cos(a*2)*2.1+sd*2,Math.sin(a*2)*2.1),rad=Math.hypot(X,Y);
+if(rad>Rr+.03)return[0,0,0,0];const rn=Math.min(1,Math.hypot(tx,ty)/Rr),e=.025,h0=H(tx,ty,rn),gx=(H(tx+e,ty,rn)-H(tx-e,ty,rn))/(2*e),gy=(H(tx,ty+e,rn)-H(tx,ty-e,rn))/(2*e),
+sx=cp*gx-sp*gy,sy=sp*gx+cp*gy;let nx=-sx*.9,ny=-sy*.9,nz=1;const l=Math.hypot(nx,ny,nz);nx/=l;ny/=l;nz/=l;const dif=Math.max(0,nx*LX+ny*LY+nz*LZ),alb=.2+.2*(NZ.f(tx*5+sd,ty*5,4)+.5),tone=NZ.f(tx*1.6,ty*1.6+sd,3);
+const v=alb*(.025+1.02*Math.pow(dif,1.05))*255,al=sm(Rr+.03,Rr-.01,rad)*255;return[v*(1+.12*tone),v*(.93+.06*tone),v*(.84-.04*tone),al]})}
+function sky(){const bg=$('#stars'),fx=$('#fx'),bx=bg.getContext('2d'),fc=fx.getContext('2d');let W=0,H=0,D=1,stars=[],rocks=[],ast=[],fl=[],prev=[],gen=0,nextAst=performance.now()+3500,last=0;
+const R=(a,b)=>a+(b-a)*Math.random(),gs=cv2(64,64);{const g=gs.getContext('2d'),r=g.createRadialGradient(32,32,0,32,32,32);r.addColorStop(0,'rgba(255,255,255,.95)');r.addColorStop(.1,'rgba(255,255,255,.5)');r.addColorStop(.35,'rgba(255,255,255,.1)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,64,64)}
+async function build(){const my=++gen;D=Math.min(devicePixelRatio||1,1.75);W=bg.width=fx.width=Math.round(innerWidth*D);H=bg.height=fx.height=Math.round(innerHeight*D);bx.fillStyle='#000';bx.fillRect(0,0,W,H);stars=[];prev=[];
+const ok=()=>my===gen;
+/* stars first so the page is never empty */
+let sd=11;const rnd=()=>{sd=(sd*1664525+1013904223)>>>0;return sd/4294967296};const n=Math.round(innerWidth*innerHeight/1100);
+for(let i=0;i<n;i++){const m=rnd()**7,s=spec(rnd()),x=rnd()*W,y=rnd()*H,rd=D*(.42+1.05*m),al=.18+.82*Math.min(1,m*1.6+.12);bx.fillStyle='rgba('+s[0]+','+s[1]+','+s[2]+','+al.toFixed(3)+')';bx.beginPath();bx.arc(x,y,rd,0,6.2832);bx.fill();
+if(m>.1){const g=D*(2+11*m);bx.globalAlpha=.10+.4*m;bx.drawImage(gs,x-g,y-g,g*2,g*2);bx.globalAlpha=1;stars.push({x,y,m,c:s})}}
+stars.sort((a,b)=>b.m-a.m);stars.length=Math.min(stars.length,260);
+await tick();if(!ok())return;
+const mw=await milky(W,H);if(!ok())return;{const c=cv2(mw.width,mw.height);c.getContext('2d').putImageData(mw,0,0);bx.globalCompositeOperation='lighter';bx.imageSmoothingQuality='high';bx.drawImage(c,0,0,W,H);bx.globalCompositeOperation='source-over'}
+/* extra faint stars inside the band */
+{const nb=Math.round(n*.8);for(let i=0;i<nb;i++){const x=rnd()*W,y=rnd()*H,px=(x/W-.5)*W/H,py=y/H-.5,u=Math.sin(.5)*px+Math.cos(.5)*py*-1+0,dd=Math.exp(-(((-Math.sin(-.5)*px+Math.cos(-.5)*py)/.2)**2));if(rnd()>dd*.9)continue;const s=spec(rnd());bx.fillStyle='rgba('+s[0]+','+s[1]+','+s[2]+','+(.1+.3*rnd()).toFixed(2)+')';bx.fillRect(x,y,D*.9,D*.9)}}
+await tick();if(!ok())return;
+const gal=[[0,1,.38,.9,74],[0,3,.6,2.3,56],[1,5,.7,.4,44],[0,7,.3,1.5,90],[1,9,.5,2.1,36]];const spots=[[.08,.2],[.62,.1],[.9,.48],[.3,.9],[.12,.6]];let gi=0;
+for(const g of gal){const S=Math.round(g[4]*D*1.6),im=await galaxy(S,g[1],g[0],g[2],g[3]);if(!ok())return;const c=cv2(S,S);c.getContext('2d').putImageData(im,0,0);bx.globalCompositeOperation='lighter';bx.globalAlpha=.8;const sp=spots[gi++];bx.drawImage(c,sp[0]*W-S/2,sp[1]*H-S/2,S,S);bx.globalAlpha=1;bx.globalCompositeOperation='source-over'}
+/* planets: a banded gas giant low on the right, a smaller ocean world on the left */
+{const Rg=Math.round(Math.min(W,H)*.3),S=Math.min(640,Rg*2),im=await planetGas(S,3.7);if(!ok())return;const c=cv2(S,S);c.getContext('2d').putImageData(im,0,0);
+const cx=W*.9,cy=H*1.02,g0=bx.createRadialGradient(cx,cy,Rg*.98,cx,cy,Rg*1.14);g0.addColorStop(0,'rgba(255,200,140,.10)');g0.addColorStop(1,'rgba(255,200,140,0)');bx.fillStyle=g0;bx.fillRect(cx-Rg*1.2,cy-Rg*1.2,Rg*2.4,Rg*2.4);bx.imageSmoothingQuality='high';bx.drawImage(c,cx-Rg,cy-Rg,Rg*2,Rg*2)}
+{const Rw=Math.round(Math.min(W,H)*.055),S=Math.min(520,Math.max(160,Rw*3)),im=await planetWorld(S,1.9);if(!ok())return;const c=cv2(S,S);c.getContext('2d').putImageData(im,0,0);
+const cx=W*.17,cy=H*.76,g0=bx.createRadialGradient(cx,cy,Rw*.99,cx,cy,Rw*1.25);g0.addColorStop(0,'rgba(110,170,255,.14)');g0.addColorStop(1,'rgba(110,170,255,0)');bx.fillStyle=g0;bx.fillRect(cx-Rw*1.3,cy-Rw*1.3,Rw*2.6,Rw*2.6);bx.drawImage(c,cx-Rw,cy-Rw,Rw*2,Rw*2)}
+if(RM.matches)return;
+/* asteroid sprites: 3 shapes x 24 rotation frames */
+const K=24,types=[];for(let t=0;t<3;t++){const fr=[];for(let k=0;k<K;k++){const im=await rock(96,t+1,k,K);if(!ok())return;const c=cv2(96,96);c.getContext('2d').putImageData(im,0,0);fr.push(c)}types.push(fr)}rocks=types}
+const flare=(now,first)=>{const s=stars.length?stars[Math.floor(Math.random()*Math.min(stars.length,200))]:null;return{s,life:R(2.4,6)*1000,t0:now+(first?-Math.random()*4000:R(0,1800))}};
+const spawn=()=>{if(!rocks.length)return;const m=Math.random(),sp=R(55,190)*D,r=(Math.random()<.15?R(16,26):R(7,15))*D;let px,py,vx,vy;
+if(m<.45){const th=R(-.9,.9);px=R(.05,.95)*W;py=-60*D;vx=Math.sin(th)*sp;vy=Math.cos(th)*sp}else{const ph=R(0,.8),dir=m<.725?1:-1;px=dir>0?-60*D:W+60*D;py=R(0,.7)*H;vx=dir*Math.cos(ph)*sp;vy=Math.sin(ph)*sp}
+ast.push({x:px,y:py,vx,vy,r,rot:R(0,6.28),spin:R(-.7,.7),t:Math.floor(Math.random()*3)})};
+for(let i=0;i<12;i++)fl.push(flare(performance.now(),1));
+build();let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(build,350)});
+return function draw(now){const dt=Math.min(.05,(now-(last||now))/1000);last=now;if(RM.matches||!W)return;
+for(const b of prev)fc.clearRect(b[0],b[1],b[2],b[3]);prev=[];
+fc.globalCompositeOperation='lighter';
+for(let i=0;i<fl.length;i++){let f=fl[i],u=(now-f.t0)/f.life;if(u>=1){fl[i]=f=flare(now,0);u=-1}if(u<0||!f.s)continue;const b=Math.sin(Math.PI*u)**2,s=f.s,rad=D*(5+12*b*(.4+s.m)),c=s.c;fc.globalAlpha=.55*b+.1;fc.drawImage(gs,s.x-rad,s.y-rad,rad*2,rad*2);
+fc.globalAlpha=b*.85;fc.fillStyle='rgb('+c[0]+','+c[1]+','+c[2]+')';fc.beginPath();fc.arc(s.x,s.y,D*(.6+.9*s.m)*(.8+.5*b),0,6.2832);fc.fill();prev.push([s.x-rad-2,s.y-rad-2,rad*2+4,rad*2+4])}
+fc.globalAlpha=1;fc.globalCompositeOperation='source-over';
+if(now>nextAst&&rocks.length){spawn();nextAst=now+R(6000,14000)}
+for(let i=ast.length-1;i>=0;i--){const a=ast[i];a.x+=a.vx*dt;a.y+=a.vy*dt;a.rot+=a.spin*dt;const d=a.r*2.4;
+if(a.x<-d-60||a.x>W+d+60||a.y>H+d+60){ast.splice(i,1);continue}
+const K=rocks[a.t].length,p=((a.rot/6.2832)%1+1)%1*K,k0=Math.floor(p)%K,k1=(k0+1)%K,fr=p-Math.floor(p);
+fc.globalAlpha=1;fc.drawImage(rocks[a.t][k0],a.x-a.r*1.2,a.y-a.r*1.2,a.r*2.4,a.r*2.4);if(fr>.02){fc.globalAlpha=fr;fc.drawImage(rocks[a.t][k1],a.x-a.r*1.2,a.y-a.r*1.2,a.r*2.4,a.r*2.4)}fc.globalAlpha=1;
+const bd=a.r*2.4;prev.push([a.x-bd/2-3,a.y-bd/2-3,bd+6,bd+6])}
+}}
+
+
+</script>
+<script>
+/* Flame Lab data: evidence sources, AI analyst, scenario mission and gap matrix. */
+window.FLAME_SOURCES = [
+  {
+    id: "S1",
+    title: "Microgravity Spherical Droplet Evaporation and Entropy Effects",
+    authors: "Madani, S.; Depcik, C.",
+    venue: "Entropy 25(8), 1232 (2023)",
+    url: "https://kuscholarworks.ku.edu/entities/publication/4650fa39-29b1-4ca6-81b7-69be260833ea",
+    domain: "kuscholarworks.ku.edu",
+    kind: "Peer-reviewed article (repository record)",
+    supports: "Microgravity removes buoyancy, giving droplets a spherically symmetric configuration that simplifies modeling."
+  },
+  {
+    id: "S2",
+    title: "Microgravity Droplet Combustion: General Background for Spherically Symmetric Isolated Droplet Combustion",
+    authors: "Princeton University, Combustion Lab",
+    venue: "Research background page",
+    url: "https://princeton.edu/~combust/research/mgc/sphere.html",
+    domain: "princeton.edu",
+    kind: "University research page",
+    supports: "Classical d2-law assumptions: spherical symmetry and chemistry that is fast relative to diffusion."
+  },
+  {
+    id: "S3",
+    title: "Advanced Combustion via Microgravity Experiments (ACME): candle flames",
+    authors: "NASA Science",
+    venue: "NASA Science",
+    url: "https://science.nasa.gov/?p=157833",
+    domain: "science.nasa.gov",
+    kind: "Government agency educational page",
+    supports: "On Earth, buoyant convection makes a candle flame teardrop-shaped and yellow from soot. In microgravity the flame is spherical, soot-free and blue."
+  },
+  {
+    id: "S4",
+    title: "Flame Extinguishment Experiment (FLEX): visualization",
+    authors: "NASA Scientific Visualization Studio",
+    venue: "NASA SVS",
+    url: "https://svs.gsfc.nasa.gov/old/11318",
+    domain: "svs.gsfc.nasa.gov",
+    kind: "Government agency visualization record",
+    supports: "In microgravity a droplet flame forms a ball shape. After the visible flame is put out, unused fuel can glow as a cool flame at 400 to 1,000 °F."
+  },
+  {
+    id: "S5",
+    title: "Researchers discover cool-burning flames in space that could lead to better engines here on Earth",
+    authors: "UC San Diego Jacobs School of Engineering",
+    venue: "News release",
+    url: "https://jacobsschool.ucsd.edu/news/release?id=1548",
+    domain: "jacobsschool.ucsd.edu",
+    kind: "University news release",
+    supports: "The main difference between Earth and the space station is buoyancy. Heptane droplets kept burning as cool flames that were invisible to the naked eye."
+  },
+  {
+    id: "S6",
+    title: "Droplet Combustion Experiments Aboard the International Space Station",
+    authors: "Published in Microgravity Science and Technology",
+    venue: "DOI 10.1007/s12217-014-9372-2",
+    url: "https://link.springer.com/doi/10.1007/s12217-014-9372-2",
+    domain: "link.springer.com",
+    kind: "Peer-reviewed article",
+    supports: "After the visible hot flame radiatively extinguished around a large heptane droplet, the droplet continued to burn with a cool flame, inferred from sustained quasi-steady burning."
+  },
+  {
+    id: "S7",
+    title: "Cool flames and hot flames: Combustion experiments onboard the International Space Station",
+    authors: "American Physical Society, Division of Fluid Dynamics (invited talk abstract)",
+    venue: "APS archive",
+    url: "https://archive.aps.org/oss/2021/b05/1",
+    domain: "archive.aps.org",
+    kind: "Professional society abstract",
+    supports: "Cool flames need long residence times, which buoyancy-limited Earth experiments do not provide."
+  },
+  {
+    id: "S8",
+    title: "NASA-STD-3001 Technical Brief OCHMO-TB-003: Habitable Atmosphere (Rev A, 2023)",
+    authors: "NASA Office of the Chief Health and Medical Officer",
+    venue: "NASA technical brief",
+    url: "https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-003-habitable-atmosphere.pdf",
+    domain: "nasa.gov",
+    kind: "Agency technical brief",
+    supports: "ISS cabin pressure is typically maintained at 14.7 psia with 21% O2. Crewed spacecraft cabin pressure is required to be between 5.0 and 15.0 psia for indefinite exposure."
+  },
+  {
+    id: "S9",
+    title: "Moon Fact Sheet",
+    authors: "NASA Space Science Data Coordinated Archive",
+    venue: "NASA NSSDC",
+    url: "https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html",
+    domain: "nssdc.gsfc.nasa.gov",
+    kind: "Agency reference data",
+    supports: "Lunar surface gravity is 1.62 m/s2, which is 0.165 of Earth's."
+  },
+  {
+    id: "S10",
+    title: "Mars Fact Sheet",
+    authors: "NASA Space Science Data Coordinated Archive",
+    venue: "NASA NSSDC",
+    url: "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html",
+    domain: "nssdc.gsfc.nasa.gov",
+    kind: "Agency reference data",
+    supports: "Mean Martian surface gravity is 3.73 m/s2."
+  }
+];
+
+/*
+ * Offline AI analyst adapter.
+ *
+ * No model is bundled. Register a provider when your offline model is ready:
+ *
+ *   FlameAI.register({
+ *     name: "my-local-model",
+ *     analyze: async ({ question, records, sources }) => {
+ *       // call your local model here
+ *       return { text: "...", citations: ["S1", "S4"] };
+ *     }
+ *   });
+ *
+ * Until a provider is registered, analyze() returns { ok: false } and the UI
+ * says so. The app never generates a fallback scientific answer.
+ */
+window.FlameAI = (function () {
+  let provider = null;
+
+  function isProvider(p) {
+    return p && typeof p.name === "string" && typeof p.analyze === "function";
+  }
+
+  return {
+    register(p) {
+      if (!isProvider(p)) {
+        throw new Error("Provider must have a string name and an analyze() function.");
+      }
+      provider = p;
+      return true;
+    },
+
+    status() {
+      if (!provider) {
+        return {
+          connected: false,
+          message: "No offline AI model is connected. Analysis is disabled until a provider is registered."
+        };
+      }
+      return { connected: true, message: "Connected to " + provider.name + "." };
+    },
+
+    async analyze(request) {
+      if (!provider) return { ok: false, reason: "not_connected" };
+      if (!request || typeof request.question !== "string" || !Array.isArray(request.records)) {
+        return { ok: false, reason: "invalid_request" };
+      }
+      const sources = (window.FLAME_SOURCES || []).filter(function (s) {
+        return request.sourceIds ? request.sourceIds.indexOf(s.id) !== -1 : true;
+      });
+      try {
+        const res = await provider.analyze({
+          question: request.question,
+          records: request.records,
+          sources: sources
+        });
+        if (!res || typeof res.text !== "string" || !Array.isArray(res.citations)) {
+          return { ok: false, reason: "invalid_response" };
+        }
+        const known = new Set(sources.map(function (s) { return s.id; }));
+        const unknown = res.citations.filter(function (c) { return !known.has(c); });
+        if (unknown.length) return { ok: false, reason: "unverified_citation", unknown: unknown };
+        return { ok: true, text: res.text, citations: res.citations };
+      } catch (err) {
+        return { ok: false, reason: "provider_error" };
+      }
+    }
+  };
+})();
+
+/* Data Explorer, evidence coverage, AI Analyst panel and export. */
+const EV={ref:['Reference value (agency document)','exp'],exp:['Experimental observation','exp'],der:['Derived result','cmp'],vis:['Illustrative visualization','illu'],mod:['Model prediction','illu'],syn:['Synthetic demonstration','syn'],gap:['Gap: no data loaded','gap']};
+/* Evidence class per registered source, judged from the source type (an agency or journal summary of experiments, a modeling paper, or a visualization). */
+const SRC_EV={S1:'der',S2:'der',S3:'exp',S4:'vis',S5:'exp',S6:'exp',S7:'exp',S8:'ref',S9:'ref',S10:'ref'};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let evFilter='all';
+function renderData(){const F=$('#filters'),box=$('#srcs'),src=window.FLAME_SOURCES||[];
+const classes=['all',...new Set(src.map(s=>SRC_EV[s.id]))];
+F.innerHTML=classes.map(c=>`<button class="chip" aria-pressed="${c===evFilter}" data-c="${c}">${c==='all'?'All':EV[c][0]}</button>`).join('');
+F.onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;evFilter=b.dataset.c;renderData()};
+box.innerHTML=src.filter(s=>evFilter==='all'||SRC_EV[s.id]===evFilter).map(s=>`<article class="src" id="src-${s.id}"><span class="tag ${EV[SRC_EV[s.id]][1]}">${EV[SRC_EV[s.id]][0]}</span> <span class="tiny">${s.id} &middot; ${esc(s.kind)}</span>
+<h4><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a></h4><p class="tiny">${esc(s.authors)} &middot; ${esc(s.venue)} &middot; ${esc(s.domain)}</p><p>${esc(s.supports)}</p></article>`).join('');
+const rows=[['Flame shape, Earth vs microgravity (qualitative)',['S3','S4'],'gap','In app (2-D model)'],['Soot and colour change',['S3'],'gap','Illustrative colour ramp only'],['Cool flames after hot-flame extinction',['S5','S6','S7'],'gap','Not modelled'],['Spherical droplet symmetry assumptions',['S1','S2'],'gap','Not modelled'],['Oxygen concentration sweep',[],'gap','In app, unvalidated'],['Pressure sweep',[],'gap','In app, unvalidated'],['Fuel comparison (hydrogen, propane, ethanol)',[],'gap','In app, unvalidated']];
+$('#cov').innerHTML='<tr><th>Topic</th><th>Qualitative sources</th><th>Quantitative dataset</th><th>This app</th></tr>'+rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1].length?r[1].map(i=>`<a href="#src-${i}" data-s="${i}">${i}</a>`).join(' '):'<span class="tag gap">None</span>'}</td><td><span class="tag gap">${EV[r[2]][0]}</span></td><td>${r[3]}</td></tr>`).join('');
+$('#cov').onclick=e=>{const a=e.target.closest('[data-s]');if(a){evFilter='all';renderData();setTimeout(()=>document.getElementById('src-'+a.dataset.s)?.scrollIntoView({block:'center'}),0);e.preventDefault()}}}
+function initAnalyst(){const st=FlameAI.status();$('#aiStatus').innerHTML=esc(st.message)+(st.connected?'':' Register a provider with <code>FlameAI.register({name, analyze})</code>; see the adapter notes in the source.');
+$('#aiForm').onsubmit=async e=>{e.preventDefault();const q=$('#aiQ').value.trim(),out=$('#aiOut');if(!q)return;out.textContent='Working...';
+const r=await FlameAI.analyze({question:q,records:(window.FLAME_SOURCES||[]).map(s=>({id:s.id,title:s.title,supports:s.supports,url:s.url}))});
+if(!r.ok){out.innerHTML=r.reason==='not_connected'?'No offline AI model is connected, so no analysis was produced. The app never writes a substitute scientific answer.':'The analysis could not be completed ('+esc(r.reason)+').';return}
+out.innerHTML='<span class="tag syn">AI interpretation</span> '+esc(r.text)+(r.citations&&r.citations.length?'<br>Sources: '+r.citations.map(i=>`<a href="#src-${esc(i)}" data-s="${esc(i)}">${esc(i)}</a>`).join(', '):'')}}
+function exportJSON(M){const d={tool:'Flame Lab v6',exported:new Date().toISOString(),settings:{...S,gravityLabel:gl(S),effectiveG:geff(S)},label:'Model prediction from an unvalidated 2-D reduced-order solver',measured:M,limitations:['2-D planar geometry','constants approximate and uncited','visual detail is not physics'],sources:(window.FLAME_SOURCES||[]).map(s=>({id:s.id,title:s.title,url:s.url,evidenceClass:EV[SRC_EV[s.id]][0]}))};
+const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));a.download='flame-lab-v6-state.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+
+/* Mission Scenario Analyzer and Research Gap Finder. Both are transparent heuristics over the reduced-order model and the loaded sources. */
+const SCN=[
+{id:'earth',name:'Earth reference',g:1,o2:21,p:1,rel:.3,gs:'S8',ps:'S8',reg:'earth',note:'Sea-level air, shown for comparison.'},
+{id:'iss',name:'ISS cabin',g:0,o2:21,p:1,rel:1,gs:'S3',ps:'S8',reg:'micro',note:'Microgravity; 14.7 psia and 21% O2 are stated for the ISS cabin.'},
+{id:'moon',name:'Lunar surface habitat',g:1.62/9.81,o2:21,p:1,rel:.9,gs:'S9',ps:'',reg:'lunar',note:'Gravity from NASA; cabin air assumed equal to the ISS.'},
+{id:'moonlp',name:'Lunar habitat, reduced pressure',g:1.62/9.81,o2:21,p:.7,rel:.8,gs:'S9',ps:'S8',reg:'lunar',note:'0.7 atm is about 10.3 psia, inside the 5 to 15 psia range NASA permits; the exact value is assumed.'},
+{id:'mars',name:'Mars surface habitat',g:3.73/9.81,o2:21,p:1,rel:.8,gs:'S10',ps:'',reg:'mars',note:'Gravity from NASA; cabin air assumed equal to the ISS.'}];
+const MR={};let mBusy=false;
+const cite=i=>i?`<a href="#src-${i}" data-s="${i}">${i}</a>`:'<span class="tag illu">assumed</span>';
+function runScenario(sc){return new Promise(res=>{const s2={...S,o2:sc.o2,p:sc.p,u:.02,v:100*(1-sc.g)},f=new Fluid(64,160,.001,{sideWall:true,botWall:true,vc:3,iters:14});f.cfg(s2,geff(s2));
+const il=[];for(let i=30;i<=34;i++){const q=(i-32)/2;f.fixed[i]=1;il.push([i,f.vj*(.5+(1-q*q)*.67),1])}f.setInlets(il);f.mask();{const a=[];for(let j=1;j<=4;j++)for(let i=28;i<=36;i++)a.push(j*64+i);f.setPilot(a)}let n=0;
+const go=()=>{for(let k=0;k<8&&n<300;k++,n++)f.step(.012,{});if(n<300)return setTimeout(go,0);f.finalize();let top=0,area=0,sv=0,sw=0;for(let j=1;j<160;j++)for(let i=0;i<64;i++){const k=j*64+i;if(f.pf[k]&&f.th[k]>=.5){area++;if(j>top)top=j}if(f.pf[k]&&f.th[k]>=.3){sv+=f.v[k];sw++}}
+let pk=0;for(let k=0;k<f.n;k++)if(f.T[k]>pk)pk=f.T[k];res({burn:f.burn,top,area,wid:top?area/top:0,vhot:sw?sv/sw:0,pk,g:geff(s2),sat:top>=157})};go()})}
+async function runMission(){if(mBusy)return;mBusy=true;$('#mRun').disabled=true;for(let i=0;i<SCN.length;i++){$('#mStat').textContent=`Running ${i+1} of ${SCN.length}: ${SCN[i].name}...`;MR[SCN[i].id]=await runScenario(SCN[i]);renderMission();renderGaps()}
+$('#mStat').textContent='Done. Settings used: '+S.fuel+', '+S.T+' K ambient, '+(+S.q).toFixed(1)+' cm/s fuel flow.';$('#mRun').disabled=false;mBusy=false}
+function dH(id){const e=MR.earth,r=MR[id];return e&&r&&e.vhot>.01?(r.vhot-e.vhot)/e.vhot*100:null}
+function renderMission(){const rows=SCN.map(sc=>{const r=MR[sc.id],d=dH(sc.id);return`<tr><td>${esc(sc.name)}<br><span class="tiny">${esc(sc.note)}</span></td><td>${(sc.g*9.81).toFixed(2)} m/s&sup2;<br>${cite(sc.gs)}</td><td>${sc.o2}%<br>${cite(sc.id==='earth'||sc.id==='iss'?'S8':'')}</td><td>${sc.p} atm<br>${cite(sc.ps)}</td>
+<td>${r?(r.burn?(r.sat?'&ge; ':'')+r.top+' mm':'not sustained'):'&ndash;'}</td><td>${r?r.wid.toFixed(0)+' mm':'&ndash;'}</td><td>${r?r.vhot.toFixed(2)+' m/s':'&ndash;'}</td><td>${r?Math.round(r.pk)+' K':'&ndash;'}</td><td>${d==null?'&ndash;':(d>0?'+':'')+d.toFixed(0)+'%'}</td></tr>`}).join('');
+$('#mTab').innerHTML='<tr><th>Scenario</th><th>Gravity</th><th>O&#8322;</th><th>Pressure</th><th>Hot-gas column top</th><th>Mean width</th><th>Hot-gas rise speed</th><th>Peak gas T</th><th>Rise speed vs Earth</th></tr>'+rows;
+$('#mNote').innerHTML='Each run is 3.6 s of simulated time in a 64 mm by 160 mm boxed 2-D chamber with a 4 mm slot burner and the same pilot igniter as the main page. Hot gas means model temperature rise of at least 50% of adiabatic (rise speed uses 30%). A column top marked with a greater-than sign reached the chamber top, so it is a lower bound, which is why rise speed, not height, is the comparison metric. Sources: <a href="#src-S8" data-s="S8">S8</a>, <a href="#src-S9" data-s="S9">S9</a>, <a href="#src-S10" data-s="S10">S10</a>.'}
+/* Which source summaries cover which condition (tags assigned by reading each source's one-line summary). */
+const COV={S1:{g:['micro'],geo:['droplet']},S2:{g:['micro'],geo:['droplet']},S3:{g:['micro','earth'],geo:['candle'],fuel:['wax']},S4:{g:['micro'],geo:['droplet']},S5:{g:['micro'],geo:['droplet'],fuel:['heptane']},S6:{g:['micro'],geo:['droplet'],fuel:['heptane']},S7:{g:['micro'],geo:['droplet'],fuel:['heptane']}};
+const DIM=[['g','Gravity',1],['geo','Geometry',.9],['fuel','Fuel',.8],['p','Pressure',.7],['o2','Oxygen',.6]];
+function covered(sc,d){if(d==='g')return Object.keys(COV).filter(k=>COV[k].g.includes(sc.reg));if(d==='geo')return Object.keys(COV).filter(k=>COV[k].geo.includes('planar slot'));if(d==='fuel')return Object.keys(COV).filter(k=>(COV[k].fuel||[]).includes(S.fuel.toLowerCase()));return[]}
+function renderGaps(){const prio=[];const rows=SCN.map(sc=>{const cells=DIM.map(d=>{const c=covered(sc,d[0]);if(!c.length)prio.push({sc,d,v:sc.rel*d[2]});return c.length?`<td>${c.map(cite).join(' ')}</td>`:'<td><span class="tag gap">Gap</span></td>'}),unc=cells.filter(x=>x.includes('gap')).length/5,d=dH(sc.id),sens=d==null?.5:Math.min(1,Math.abs(d)/100),score=sc.rel*(.6*unc+.4*sens);sc._s=score;
+return`<tr><td>${esc(sc.name)}</td>${cells.join('')}<td>${sc.rel}</td><td>${d==null?'<span class="tiny">run analyzer</span>':(d>0?'+':'')+d.toFixed(0)+'%'}</td><td><b>${score.toFixed(2)}</b></td></tr>`}).join('');
+$('#gTab').innerHTML='<tr><th>Scenario</th>'+DIM.map(d=>'<th>'+d[1]+'</th>').join('')+'<th>Relevance weight</th><th>Model sensitivity</th><th>Priority score</th></tr>'+rows;
+prio.sort((a,b)=>b.v-a.v);const seen=new Set(),out=[];for(const p of prio){const key=p.d[0]+(p.d[0]==='g'?p.sc.reg:p.d[0]==='p'?p.sc.p:p.d[0]==='o2'?p.sc.o2:'');if(seen.has(key))continue;seen.add(key);out.push(p);if(out.length>=6)break}
+const q=(p)=>{const sc=p.sc,d=dH(sc.id),dd=d==null?'(run the analyzer for the model trend)':'(model: hot-gas rise speed '+(d>0?'+':'')+d.toFixed(0)+'% vs Earth)';
+return{g:`Is the flame-size trend at ${(sc.g).toFixed(2)} g (${sc.name}) ${dd} supported by experiment? No partial-gravity source is loaded.`,geo:`Do results for a planar slot flame transfer to the droplet and candle geometries that the loaded sources cover, for ${sc.name}?`,fuel:`Is ${S.fuel.toLowerCase()} flame behaviour in ${sc.name} supported by experiment? Loaded fuel evidence covers heptane droplets and candle wax only.`,p:`How does a cabin pressure of ${sc.p} atm change flame extent in ${sc.name}? No source with a pressure variation is loaded.`,o2:`How does ${sc.o2}% oxygen at ${sc.p} atm affect flame extent in ${sc.name}? No source reports an oxygen concentration for flame experiments.`}[p.d[0]]};
+$('#gQ').innerHTML=out.map(p=>`<li>${esc(q(p))} <span class="tiny">(priority ${p.v.toFixed(2)})</span></li>`).join('');
+$('#gForm').innerHTML='Scenario score = relevance weight x (0.6 x share of the five dimensions with no loaded source + 0.4 x model sensitivity), where model sensitivity is the absolute change in hot-gas rise speed versus Earth capped at 100% (0.5 until the analyzer runs). Question priority = relevance weight x dimension weight (gravity 1.0, geometry 0.9, fuel 0.8, pressure 0.7, oxygen 0.6). All weights are my assumptions, not measured values. Coverage tags come from each source summary in the <a href="#data">Data Explorer</a>.'}
+function initMission(){$('#mRun').onclick=runMission;renderMission();renderGaps();for(const t of['#mTab','#gTab','#gQ','#mNote']){$(t).addEventListener('click',e=>{const a=e.target.closest('[data-s]');if(a){evFilter='all';renderData();setTimeout(()=>document.getElementById('src-'+a.dataset.s)?.scrollIntoView({block:'center'}),0);e.preventDefault()}})}}
+
+
+</script>
+<script>
+/* Flame Lab control: UI wiring, burner drag, readouts, render loop. Calls the engine only through its public methods. */
+/* Application wiring: controls, galaxy backdrop, render loop, pointer and burner interaction, resize handling. */
+const A={paused:false,t0:performance.now(),last:performance.now(),M:{h:0,w:0,pk:0},cmp:{}};
+function controls(){const sel=$('#fuel');sel.innerHTML=Object.keys(FU).map(k=>`<button type="button" class="chip" role="radio" data-f="${k}" aria-checked="false">${k}</button>`).join('');
+$('#sliders').innerHTML=SL.map(s=>`<div class="sl"><div class="h"><span>${s.i} ${s.n}</span><output id="o_${s.k}"></output></div><input type="range" id="r_${s.k}" min="${s.min}" max="${s.max}" step="${s.st}" aria-label="${s.n}"></div>`).join('');
+$('#presets').innerHTML=Object.keys(P).map(k=>`<button class="chip" data-p="${k}" aria-pressed="false">${k}</button>`).join('');
+$('#wtabs').innerHTML=Object.keys(W).map(k=>`<button class="chip" role="tab" data-w="${k}" aria-selected="false">${k}</button>`).join('');
+const sync=()=>{for(const s of SL){const r=$('#r_'+s.k);r.value=S[s.k];r.style.setProperty('--p',((S[s.k]-s.min)/(s.max-s.min)*100).toFixed(1)+'%');$('#o_'+s.k).textContent=s.f(S)}$$('#fuel .chip').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.f===S.fuel)));
+$$('#presets .chip').forEach(b=>b.setAttribute('aria-pressed',String(PK.every(k=>P[b.dataset.p][k]===S[k]))));
+$$('#wtabs .chip').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.w===S.w)));$('#wtext').textContent=W[S.w][2]+' Current value: '+W[S.w][1](S)+'.'};
+const apply=()=>{sync();typeof renderGaps==='function'&&renderGaps();A.world.reconfig();for(const c of A.ch)c.reconfig()};
+SL.forEach(s=>$('#r_'+s.k).addEventListener('input',e=>{S[s.k]=+e.target.value;apply()}));
+sel.addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(!b)return;S.fuel=b.dataset.f;apply()});
+$('#presets').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(!b)return;Object.assign(S,P[b.dataset.p]);apply()});
+$('#wtabs').addEventListener('click',e=>{const b=e.target.closest('[data-w]');if(!b)return;S.w=b.dataset.w;sync()});
+$('#reset').onclick=()=>{A.world.reset();for(const c of A.ch)c.reset()};
+$('#export').onclick=()=>exportJSON({...A.M,earthChamber:A.cmp.E,microgravityChamber:A.cmp.M});
+$('#pause').onclick=e=>{A.paused=!A.paused;e.currentTarget.setAttribute('aria-pressed',String(A.paused));e.currentTarget.textContent=A.paused?'Resume':'Pause'};
+sync()}
+function burnerEl(){const el=$('#burner'),w=A.world;let drag=0;
+const put=()=>{const t=w.cy(w.bj)+w.cell/2,sp=el.firstElementChild;el.style.transform=`translate(${w.cx(w.bi)}px,${t}px)`;sp.style.height=2*w.cell+'px';sp.style.width=(2*w.pw+1)*w.cell+'px';sp.style.left=-((2*w.pw+1)*w.cell)/2+'px';sp.style.top='0';const st=el.lastElementChild;st.style.left=-((2*w.pw-1)*w.cell)/2+'px';st.style.width=(2*w.pw-1)*w.cell+'px';st.style.top=w.cell+'px';st.style.height=Math.max(0,innerHeight-t-w.cell)+'px'};
+A.putBurner=put;w.onMove=put;put();
+el.addEventListener('pointerdown',e=>{drag=1;el.setPointerCapture(e.pointerId);e.preventDefault()});
+el.addEventListener('pointermove',e=>{if(!drag)return;w.moveBurner(e.clientX,e.clientY)});
+el.addEventListener('pointerup',()=>{drag=0});
+el.addEventListener('keydown',e=>{const d={ArrowLeft:[-16,0],ArrowRight:[16,0],ArrowUp:[0,-16],ArrowDown:[0,16]}[e.key];if(d){w.moveBurner(w.burner.x+d[0],w.burner.y+d[1]);e.preventDefault()}})}
+function readout(){const f=A.world.f,w=A.world,half=Math.round(w.N*.2),m=f.measure(w.bi-half,w.bi+half,w.bj+1);A.M={heightMm:+m.h.toFixed(0),widthMm:+m.w.toFixed(0),peakK:Math.round(m.pk),fuel:S.fuel,gravity:gl(S)};
+$('#live').innerHTML=`<dt>Gravity</dt><dd>${gl(S)}</dd><dt>Fuel</dt><dd>${S.fuel}</dd><dt>Flame height</dt><dd>${f.burn?(m.h?m.h.toFixed(0)+' mm':'no flame'):'not sustained'}</dd><dt>Flame width</dt><dd>${f.burn?(m.w?m.w.toFixed(0)+' mm':'no flame'):'not sustained'}</dd><dt>Peak gas T</dt><dd>${Math.round(m.pk)} K</dd><dt>Solver</dt><dd>${w.N}&times;${w.M}, ${f.iters} it</dd>`;
+const h=A.ui.hot,out=f.burn&&!m.h&&f.t>5;$('#hot').textContent=out?'No flame is detected (temperature rise below 30% of adiabatic). In this model a stagnant flame loses heat by radiation (uncalibrated coefficient) and can go out. Press Reset flame to re-ignite.':h.dT>2?`Hottest interface surface: ${h.name}, about +${h.dT.toFixed(0)} K above ambient (lumped model).`:'Interface panels are at ambient temperature. Move the burner close to a panel.';
+for(const[k,c]of[['E',A.ch[0]],['M',A.ch[1]]]){const q=c.measure();A.cmp[k]={heightMm:+q.h.toFixed(0),widthMm:+q.w.toFixed(0),peakK:Math.round(q.pk)};$('#m'+k).textContent=`${q.h.toFixed(0)} mm tall, ${q.w.toFixed(0)} mm wide, peak ${Math.round(q.pk)} K`}
+const E=A.cmp.E,Mg=A.cmp.M;$('#cmpText').textContent=E.heightMm&&Mg.heightMm?`Model result at these settings: the microgravity flame is ${Mg.heightMm} mm tall and ${Mg.widthMm} mm wide; the Earth flame is ${E.heightMm} mm tall and ${E.widthMm} mm wide. In 2-D the microgravity flame is still growing, so its size depends on run time. This is a model prediction, not an observation.`:'The chambers need a few seconds of run time before a flame contour exists.'}
+function main(){
+let rd;const cv=$('#world');try{rd=new Renderer(cv,{dpr:2,maxPx:5.5e6})}catch(e){console.error('Renderer fallback: '+e.message);const n=cv.cloneNode();cv.replaceWith(n);rd=new Renderer(n,{no3d:true})}
+A.rd=rd;A.world=new World();A.ui=new UIPhys(A.world);A.draw=sky();
+A.ch=[new Chamber($('#cE'),9.81),new Chamber($('#cM'),0)];
+const rescan=()=>{A.world.scan();A.world.remask();A.ui.rebuild();A.putBurner&&A.putBurner()};
+controls();renderData();initAnalyst();initMission();burnerEl();A.world.reconfig();for(const c of A.ch)c.reconfig();
+addEventListener('pointermove',e=>{A.world.pointer(e.clientX,e.clientY,e.timeStamp);A.pm=e},{passive:true});
+/* Specular highlight follows the pointer: nearby panels light up from the pointer position (computed from cached rectangles, no layout reads). */
+const glow=()=>{const e=A.pm;if(e&&A.pmDirty!==e){A.pmDirty=e;const sy=scrollY,sx=scrollX;for(const o of A.ui.it){const r=o.r,ax=r.fx?0:sx,ay=r.fx?0:sy,x0=r.x0-ax+o.ox,x1=r.x1-ax+o.ox,y0=r.y0-ay+o.oy,y1=r.y1-ay+o.oy,dx=Math.max(x0-e.clientX,0,e.clientX-x1),dy=Math.max(y0-e.clientY,0,e.clientY-y1),d=Math.hypot(dx,dy),pl=Math.max(0,1-d/260);const st=o.e.style;
+if(pl>0||o.pl>0){st.setProperty('--mx',(e.clientX-x0).toFixed(0)+'px');st.setProperty('--my',(e.clientY-y0).toFixed(0)+'px');st.setProperty('--pl',pl.toFixed(2));o.pl=pl}}}requestAnimationFrame(glow)};requestAnimationFrame(glow);
+document.addEventListener('pointerover',e=>{const b=e.target.closest&&e.target.closest('.btn,.chip');if(b)A.hb=b},{passive:true});
+document.addEventListener('pointermove',e=>{const b=e.target.closest&&e.target.closest('.btn,.chip');if(b){const r=b.getBoundingClientRect();b.style.setProperty('--mx',(e.clientX-r.left)+'px');b.style.setProperty('--my',(e.clientY-r.top)+'px');b.style.setProperty('--pl',1)}},{passive:true});
+document.addEventListener('pointerout',e=>{const b=e.target.closest&&e.target.closest('.btn,.chip');if(b)b.style.setProperty('--pl',0)},{passive:true});document.addEventListener('pointerleave',()=>A.world.leave());
+let rt;const later=()=>{clearTimeout(rt);rt=setTimeout(()=>{if(innerWidth!==A.w0||innerHeight!==A.h0){A.w0=innerWidth;A.h0=innerHeight;A.world.resize();A.world.reconfig()}rescan()},160)};
+A.w0=innerWidth;A.h0=innerHeight;addEventListener('resize',later);{const ro=new ResizeObserver(()=>{const sig=$$('[data-solid]').map(e=>e.offsetWidth+'x'+e.offsetHeight+'@'+e.offsetTop).join();if(sig!==A.sig){A.sig=sig;later()}});ro.observe(document.body);$$('[data-solid]').forEach(e=>ro.observe(e))}document.fonts&&document.fonts.ready.then(later);
+rescan();
+A.cmpVis=false;new IntersectionObserver(es=>es.forEach(e=>{A.cmpVis=e.isIntersecting}),{rootMargin:'100px'}).observe($('#compare'));A.rscale=1;A.fe=16;
+let cnt=0;
+const frame=now=>{const sec=(now-A.last)/1000;A.last=now;const t=(now-A.t0)/1000;
+A.world.update(sec,A.paused);A.ui.update(sec,A.paused,t);
+A.fe+=(Math.min(sec,.1)*1000-A.fe)*.05;if((cnt&31)===0){if(A.fe>24&&A.rscale>.55)A.rscale*=.88;else if(A.fe<15&&A.rscale<1)A.rscale=Math.min(1,A.rscale*1.06)}A.world.half=A.fe>24;rd.scale=Math.round(A.rscale*10)/10;rd.size(innerWidth,innerHeight);rd.draw(A.world.f,{time:t,detail:RM.matches?0:1,soot:S.v>=98?0:1});
+const onScreen=A.cmpVis;
+if(onScreen){if(!A.paused&&(cnt&1)===0)for(const c of A.ch)c.step();for(const c of A.ch)c.draw(t)}
+if((cnt++%20)===0)readout();A.draw(now);requestAnimationFrame(frame)};
+requestAnimationFrame(frame);window.FL=A}
+main();
+
+</script>
+
+<script>(function(){
+const side=document.getElementById('flameSide'),tab=document.getElementById('flameTab'),close=document.getElementById('flameClose'),nav=document.getElementById('flameNav');
+function set(open){document.body.classList.toggle('flame-panel',open);side.classList.toggle('open',open);tab.setAttribute('aria-expanded',String(open));tab.style.display=open?'none':''}
+tab.addEventListener('click',()=>set(true));
+close.addEventListener('click',()=>set(false));
+if(nav)nav.addEventListener('click',e=>{e.preventDefault();set(true)});
+addEventListener('keydown',e=>{if(e.key==='Escape')set(false)});
+})();</script>
+
+<script>(function(){
+const rail=document.getElementById('rail'),scrim=document.getElementById('railScrim'),menuBtn=document.getElementById('menuBtn'),
+      toggle=document.getElementById('railToggle'),btt=document.getElementById('btt');
+const VIEWS={lab:'#hero',dash:'#dash',compare:'#compare',mission:'#mission',gaps:'#gaps',data:'#data',analyst:'#analyst',about:'#about'};
+let current=null;
+function showView(v,quiet){
+  if(!VIEWS[v]||v===current)return;
+  current=quiet?null:v;
+  document.querySelectorAll('main#top > section').forEach(s=>{s.hidden=!s.matches(VIEWS[v])});
+  rail.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-current',String(b.dataset.view===v)));
+  const isLab=v==='lab';
+  document.body.classList.toggle('flame-on',isLab&&!quiet);
+  scrollTo({top:0,behavior:'auto'});
+  setDrawer(false);
+  history.replaceState(null,'','#'+v);
+}
+rail.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)showView(b.dataset.view)});
+/* collapse on desktop */
+toggle.addEventListener('click',()=>{const min=!rail.classList.contains('min');rail.classList.toggle('min',min);document.body.classList.toggle('rail-min',min);toggle.setAttribute('aria-expanded',String(!min))});
+/* mobile drawer */
+function setDrawer(open){rail.classList.toggle('open',open);scrim.classList.toggle('show',open);menuBtn.setAttribute('aria-expanded',String(open))}
+menuBtn.addEventListener('click',()=>setDrawer(!rail.classList.contains('open')));
+scrim.addEventListener('click',()=>setDrawer(false));
+addEventListener('keydown',e=>{if(e.key==='Escape')setDrawer(false)});
+addEventListener('resize',()=>{if(innerWidth>820)setDrawer(false)});
+/* back to top */
+const upd=()=>btt.classList.toggle('show',scrollY>420);
+addEventListener('scroll',upd,{passive:true});upd();
+btt.addEventListener('click',()=>scrollTo({top:0,behavior:'smooth'}));
+/* start view from the URL hash, default Flame lab */
+const start=(location.hash||'').slice(1);
+showView(VIEWS[start]?start:'lab',!VIEWS[start]);
+document.querySelectorAll('a[href="#flame"]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();showView('lab')}));
+})();</script>
+
+<script>(function(){
+/* Boot overlay: stays until every step is really done AND at least 3 seconds have passed */
+const MIN_BOOT_MS=3000;
+const bootStart=performance.now();
+const boot=document.getElementById('boot'),bar=document.getElementById('blBar'),pct=document.getElementById('blPct'),stepEl=document.getElementById('blStep');
+const steps=['Parsing page','Loading fonts','Loading assets','Starting solver'];
+const done=steps.map(()=>false);
+let hidden=false;
+function update(){
+  const n=done.filter(Boolean).length,p=Math.round(n/steps.length*100);
+  if(bar)bar.style.width=p+'%';if(pct)pct.textContent=p;
+  const next=done.indexOf(false);
+  if(stepEl&&next>=0)stepEl.textContent=steps[next];
+  if(n===steps.length)finish();
+}
+function finish(){
+  if(hidden||!done.every(Boolean))return;
+  const wait=Math.max(0,MIN_BOOT_MS-(performance.now()-bootStart));
+  hidden=true;
+  setTimeout(()=>{if(!boot)return;if(stepEl)stepEl.textContent='Ready';
+    if(pct)pct.textContent='100';if(bar)bar.style.width='100%';
+    setTimeout(()=>{boot.classList.add('gone');setTimeout(()=>boot.remove(),800)},200)},wait);
+}
+function mark(i){if(!done[i]){done[i]=true;update()}}
+update();
+if(document.readyState!=='loading')mark(0);else document.addEventListener('DOMContentLoaded',()=>mark(0));
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>mark(1));else mark(1);
+if(document.readyState==='complete')mark(2);else addEventListener('load',()=>mark(2));
+/* Phase 4: wait for the real solver object, then for two frames so the first image is drawn */
+const iv=setInterval(()=>{
+  if(window.FL){clearInterval(iv);requestAnimationFrame(()=>requestAnimationFrame(()=>mark(3)))}
+},100);
+/* Safety net: if the solver never starts, say so instead of hiding the error */
+setTimeout(()=>{if(!done[3]&&stepEl)stepEl.textContent='Solver did not start. Reload the page.'},30000);
+
+/* Status bar: solver state follows the Pause button; UTC clock */
+const pb=document.getElementById('pause'),st=document.getElementById('sState');
+function sync(){if(!pb||!st)return;const p=pb.getAttribute('aria-pressed')==='true';st.textContent=p?'Paused':'Running';st.className=p?'warn':'ok'}
+if(pb)new MutationObserver(sync).observe(pb,{attributes:true,attributeFilter:['aria-pressed']});sync();
+const utc=document.getElementById('utc');const tick=()=>{if(utc)utc.textContent=new Date().toISOString().slice(11,19)};tick();setInterval(tick,1000);
+
+/* Theme switch: checked = dark, unchecked = white */
+const themeIn=document.getElementById('input');
+if(themeIn){const apply=()=>document.documentElement.classList.toggle('light',!themeIn.checked);themeIn.addEventListener('change',apply);apply()}
+})();</script>
+</body>
+</html>
